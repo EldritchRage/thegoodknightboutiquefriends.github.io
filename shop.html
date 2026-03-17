@@ -1,14 +1,134 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Shop - The Good Knight Boutique Friends</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shop - The Good Knight Boutique Friends</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">The Good Knight Boutique+</div>
+      <nav class="site-nav">
+        <a href="index.html">Home</a>
+        <a href="creators.html">Creators</a>
+        <a href="shop.html" class="active">Shop</a>
+        <a href="join.html">Join</a>
+      </nav>
+    </div>
+  </header>
 
-<h1>Shop</h1>
+  <main class="page">
+    <section class="hero">
+      <h1>Shelby Knight Shop</h1>
+      <p class="muted">Choose a category to open a specific catalog. Click item details to expand each description.</p>
+      <p class="muted">Tip: replace each product image URL in <code>shop.js</code> with your actual product photos.</p>
+    </section>
 
-<p>Browse products from our creators.</p>
+    <section class="shop-layout">
+      <aside class="panel category-tree">
+        <h3>Shop Categories</h3>
 
+        <details open>
+          <summary>Wearables</summary>
+          <details>
+            <summary>Apparel</summary>
+            <button class="category-button" data-category="crocheted-outfits">Crocheted Outfits</button>
+            <button class="category-button" data-category="heat-pressed">Heat-Pressed</button>
+          </details>
+          <details>
+            <summary>Jewelry</summary>
+            <button class="category-button" data-category="earrings">Earrings</button>
+            <button class="category-button" data-category="necklaces">Necklaces</button>
+            <button class="category-button" data-category="bracelets">Bracelets</button>
+            <button class="category-button" data-category="rings">Rings</button>
+            <button class="category-button" data-category="keychains">Keychains</button>
+          </details>
+          <details>
+            <summary>Bags and Accessories</summary>
+            <button class="category-button" data-category="totes">Totes</button>
+            <button class="category-button" data-category="purses">Purses</button>
+            <button class="category-button" data-category="cross-body-bags">Cross Body Bags</button>
+            <button class="category-button" data-category="pouches">Pouches</button>
+            <button class="category-button" data-category="wallets">Wallets</button>
+          </details>
+        </details>
+
+        <details>
+          <summary>Drinkware and Kitchen</summary>
+          <details open>
+            <summary>Sublimated Items</summary>
+            <button class="category-button" data-category="mugs">Mugs</button>
+            <button class="category-button" data-category="tumblers">Tumblers</button>
+            <button class="category-button" data-category="water-bottles">Water Bottles</button>
+            <button class="category-button" data-category="wine-glasses">Wine Glasses</button>
+            <button class="category-button" data-category="coasters">Coasters</button>
+          </details>
+        </details>
+
+        <details>
+          <summary>3D Printed</summary>
+          <details>
+            <summary>Home Decor</summary>
+            <button class="category-button" data-category="figurines">Figurines</button>
+            <button class="category-button" data-category="ornaments">Ornaments</button>
+            <button class="category-button" data-category="desk-toys">Desk Toys</button>
+            <button class="category-button" data-category="planters">Planters</button>
+            <button class="category-button" data-category="wall-hooks">Wall Hooks</button>
+            <button class="category-button" data-category="fidget-toys">Fidget Toys</button>
+          </details>
+          <details>
+            <summary>Function Prints</summary>
+            <button class="category-button" data-category="phone-stands">Phone Stands</button>
+            <button class="category-button" data-category="cable-organizers">Cable Organizers</button>
+            <button class="category-button" data-category="cookie-cutters">Cookie Cutters</button>
+            <button class="category-button" data-category="custom-replacement-parts">Custom Replacement Parts</button>
+          </details>
+        </details>
+      </aside>
+
+      <section class="panel">
+        <h3 id="catalog-title">Category Catalog</h3>
+        <div id="catalog-grid" class="catalog-grid"></div>
+      </section>
+    </section>
+
+    <section class="panel" style="margin-top: 1rem;">
+      <h3>Check Cart</h3>
+      <ul id="cart-list" class="cart-list"></ul>
+      <p><strong>Subtotal before shipping:</strong> <span id="subtotal">$0.00</span></p>
+      <button id="checkout-toggle" class="button" disabled>Proceed to Checkout</button>
+    </section>
+
+    <section id="checkout-section" class="panel hidden" style="margin-top: 1rem;">
+      <h3>Checkout</h3>
+      <form id="checkout-form" class="checkout-form">
+        <input type="text" name="fullName" placeholder="Full Name" required>
+        <input type="text" name="address" placeholder="Shipping Address" required>
+        <select name="shippingMethod" required>
+          <option value="">Shipping Method</option>
+          <option value="standard">Standard Shipping</option>
+          <option value="expedited">Expedited Shipping</option>
+          <option value="overnight">Overnight Shipping</option>
+        </select>
+        <select name="paymentMethod" required>
+          <option value="">Payment Method</option>
+          <option value="credit-card">Credit Card</option>
+          <option value="debit-card">Debit Card</option>
+          <option value="paypal">PayPal</option>
+        </select>
+        <button type="submit" class="button">Make Purchase</button>
+      </form>
+    </section>
+
+    <section id="thank-you" class="hero hidden">
+      <h2>Thank you for your purchase!</h2>
+      <p class="muted">Your order has been received. Shelby Knight will prepare your items soon.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">© The Good Knight Boutique Friends</footer>
+  <script src="shop.js"></script>
 </body>
 </html>

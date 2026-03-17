@@ -1,155 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Creator Collective</title>
-
-<style>
-
-body{
-font-family: Arial;
-background:#111;
-color:white;
-margin:0;
-}
-
-header{
-background:black;
-padding:20px;
-text-align:center;
-}
-
-nav a{
-color:white;
-margin:10px;
-text-decoration:none;
-font-weight:bold;
-}
-
-.hero{
-padding:80px;
-text-align:center;
-background:#1a1a1a;
-}
-
-.creators{
-display:flex;
-flex-wrap:wrap;
-justify-content:center;
-padding:40px;
-}
-
-.card{
-background:#222;
-margin:15px;
-padding:20px;
-width:250px;
-border-radius:10px;
-text-align:center;
-}
-
-.card img{
-width:100%;
-border-radius:8px;
-}
-
-button{
-background:#00bcd4;
-border:none;
-padding:10px 20px;
-color:white;
-cursor:pointer;
-border-radius:5px;
-}
-
-footer{
-text-align:center;
-padding:30px;
-background:black;
-}
-
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Good Knight Boutique Friends</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">The Good Knight Boutique+</div>
+      <nav class="site-nav">
+        <a href="index.html" class="active">Home</a>
+        <a href="creators.html">Creators</a>
+        <a href="shop.html">Shop</a>
+        <a href="join.html">Join</a>
+      </nav>
+    </div>
+  </header>
 
-<header>
+  <main class="page">
+    <section class="hero">
+      <h1>A collaborative space for artists and makers</h1>
+      <p class="muted">Discover unique art, crafts, prints, and digital creations.</p>
+      <a class="button" href="shop.html">Visit Shelby Knight Shop</a>
+    </section>
 
-<h1>The Good Knight Boutique+</h1>
+    <section class="cards">
+      <article class="card">
+        <img src="https://via.placeholder.com/600x400?text=Shelby+Knight" alt="Shelby Knight creator profile placeholder">
+        <h3>Shelby Knight</h3>
+        <p class="muted">Wearables, drinkware and kitchen, and 3D printed creations.</p>
+        <a class="button" href="shop.html">Visit Shop</a>
+      </article>
+    </section>
+  </main>
 
-<nav> 
-<a href="creators.html">Creators</a>
-<a href="shop.html">Shop</a>
-<a href="join.html">Join</a>
-</nav>
-
-</header>
-
-<section class="hero">
-
-<h2>A collaborative space for artists and makers</h2>
-
-<p>Discover unique art, crafts, prints, and digital creations.</p>
-
-<a href="creators.html">
-<button>Explore Creators</button>
-</a>
-
-</section>
-
-
-<section class="creators">
-
-<div class="card">
-
-<img src="https://via.placeholder.com/200">
-
-<h3>Creator Name</h3>
-
-<p>Handcrafted</p>
-
-<a href="shop.html">
-<button>Visit Shop</button>
-</a>
-
-</div>
-
-
-<div class="card">
-
-<img src="https://via.placeholder.com/200">
-
-<h3>Creator Name</h3>
-
-<p>Digital fantasy prints</p>
-
-<a href="shop.html">
-<button>Visit Shop</button>
-</a>
-
-</div>
-
-
-<div class="card">
-
-<img src="https://via.placeholder.com/200">
-
-<h3>Creator Name</h3>
-
-<p>3D printed minis</p>
-
-<a href="shop.html">
-<button>Visit Shop</button>
-</a>
-
-</div>
-
-</section>
-
-<footer>
-
-<p>© The Good Knight Boutique Friends</p>
-
-</footer>
-
+  <footer class="site-footer">© The Good Knight Boutique Friends</footer>
 </body>
 </html>
