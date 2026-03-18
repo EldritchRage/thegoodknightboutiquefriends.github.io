@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - The Good Knight Boutique Friends</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">The Good Knight Boutique + Friends</div>
+      <nav class="site-nav">
+        <a href="index.html">Home</a>
+        <a href="creators.html">Creators</a>
+        <a href="shop.html">Shop</a>
+        <a href="join.html">Join</a>
+        <a href="admin.html" class="active">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page">
+    <section id="setup-notice" class="hero hidden">
+      <h1>Firebase Setup Required</h1>
+      <p class="muted">Update <code>firebase-config.js</code> with your Firebase web config, then refresh.</p>
+    </section>
+
+    <section id="auth-panel" class="panel">
+      <h2>Shelby Admin Access</h2>
+      <p class="muted">Use one account for Shelby so she can sign in and manage products and promos.</p>
+      <div class="admin-two-col">
+        <form id="register-form" class="checkout-form">
+          <h3>Create Admin Account (one-time)</h3>
+          <input type="email" name="email" placeholder="Email" required>
+          <input type="password" name="password" placeholder="Password (6+ chars)" minlength="6" required>
+          <button type="submit" class="button">Create Account</button>
+        </form>
+
+        <form id="login-form" class="checkout-form">
+          <h3>Sign In</h3>
+          <input type="email" name="email" placeholder="Email" required>
+          <input type="password" name="password" placeholder="Password" required>
+          <button type="submit" class="button">Sign In</button>
+        </form>
+      </div>
+      <p id="auth-message" class="muted"></p>
+    </section>
+
+    <section id="admin-panel" class="hidden">
+      <section class="panel">
+        <div class="admin-header">
+          <h2>Dashboard</h2>
+          <div>
+            <span class="muted">Signed in as <span id="user-label"></span></span>
+            <button id="sign-out" class="button secondary">Sign Out</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top:1rem;">
+        <h3>Product Manager</h3>
+        <form id="product-form" class="checkout-form">
+          <input type="hidden" name="productId" value="">
+          <input type="text" name="name" placeholder="Product Name" required>
+          <input type="number" name="price" placeholder="Price (e.g. 24.99)" min="0" step="0.01" required>
+          <select id="product-category" name="categoryId" required>
+            <option value="">Choose Category</option>
+          </select>
+          <textarea name="description" placeholder="Product Description" rows="4"></textarea>
+          <input id="product-image-url" type="url" name="imageUrl" placeholder="Image URL (optional)">
+          <input id="product-image-file" type="file" accept="image/*">
+          <label class="muted"><input type="checkbox" name="featured"> Mark as featured</label>
+          <div class="product-actions">
+            <button type="submit" class="button">Save Product</button>
+            <button id="clear-product-form" type="button" class="button secondary">Clear Form</button>
+          </div>
+        </form>
+        <p id="product-message" class="muted"></p>
+      </section>
+
+      <section class="panel" style="margin-top:1rem;">
+        <h3>Products</h3>
+        <div id="products-list" class="admin-products"></div>
+      </section>
+
+      <section class="panel" style="margin-top:1rem;">
+        <h3>Homepage Promotional Panel</h3>
+        <form id="promo-form" class="checkout-form">
+          <input type="text" name="title" placeholder="Promo Title (e.g. Spring Sale)">
+          <textarea name="message" rows="3" placeholder="Promo message"></textarea>
+          <input type="text" name="buttonLabel" placeholder="Button Label (optional)">
+          <input type="url" name="buttonUrl" placeholder="Button URL (optional)">
+          <button type="submit" class="button">Save Promo</button>
+        </form>
+        <p id="promo-message" class="muted"></p>
+      </section>
+    </section>
+  </main>
+
+  <footer class="site-footer">© The Good Knight Boutique Friends</footer>
+  <script type="module" src="admin.js"></script>
+</body>
+</html>
