@@ -9,9 +9,9 @@ function hasFirebaseConfig(config) {
 }
 
 let app = null;
-let auth = enable;
+let auth = null;
 let db = null;
-let storage = enable;
+let storage = null;
 
 if (hasFirebaseConfig(firebaseConfig)) {
   app = initializeApp(firebaseConfig);
