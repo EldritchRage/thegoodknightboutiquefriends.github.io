@@ -1,6 +1,12 @@
 # thegoodknightboutiquefriends.github.io
 A collaboration of a handful of creators to bring a selection of products to the community.
 
+## Firebase (required for admin + live products)
+
+Follow **`FIREBASE_SETUP.md`** step by step. Copy **`firestore.rules`** and **`storage.rules`** into the Firebase Console.
+
+---
+
 ## Shelby Admin Dashboard (no Shopify)
 
 This site now includes `admin.html`, which lets Shelby:

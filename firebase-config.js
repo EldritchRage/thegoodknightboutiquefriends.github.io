@@ -1,6 +1,11 @@
-// Replace these values with your Firebase web app config.
-// Keep this file committed only if you are comfortable exposing these public keys.
-// Firebase web config is not a secret, but your security rules are critical.
+/* =============================================================================
+   ONLY EDIT THIS FILE FOR FIREBASE KEYS — See FIREBASE_SETUP.md
+
+   • Paste values from: Firebase Console → Project settings (gear) → Your apps
+   • Replace every REPLACE_ME below with your real values (keep the quotes "")
+   • Do NOT edit firebase-client.js — leave auth/db/storage as null there
+   ============================================================================= */
+
 export const firebaseConfig = {
   apiKey: "REPLACE_ME",
   authDomain: "REPLACE_ME",
