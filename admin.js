@@ -274,7 +274,9 @@ function clearProductForm() {
 }
 
 async function saveProduct(event) {
-  event.preventDefault();
+  if (event && typeof event.preventDefault === "function") {
+    event.preventDefault();
+  }
   setMessage(productMessage, "Saving product...");
 
   const productId = productForm.elements.productId.value.trim();
@@ -328,7 +330,9 @@ async function saveProduct(event) {
 }
 
 async function savePromo(event) {
-  event.preventDefault();
+  if (event && typeof event.preventDefault === "function") {
+    event.preventDefault();
+  }
   setMessage(promoMessage, "Saving promo...");
 
   const title = promoForm.elements.title.value.trim();
@@ -358,7 +362,9 @@ function clearCreatorForm() {
 }
 
 async function saveCreator(event) {
-  event.preventDefault();
+  if (event && typeof event.preventDefault === "function") {
+    event.preventDefault();
+  }
   setMessage(creatorMessage, "Saving creator…");
 
   const editing = creatorEditingId.value.trim();
@@ -394,18 +400,6 @@ async function saveCreator(event) {
 }
 
 function bindAdminEvents() {
-  // Block native form navigation (GET/POST reload) before any bubble handler runs.
-  // Without this, a missed preventDefault looks like "kicked to home / logged out" and saves never finish.
-  document.querySelectorAll("form").forEach((form) => {
-    form.addEventListener(
-      "submit",
-      (e) => {
-        e.preventDefault();
-      },
-      { capture: true }
-    );
-  });
-
   creatorSlugInput.addEventListener("blur", () => {
     if (creatorSlugInput.readOnly) {
       return;
@@ -413,7 +407,11 @@ function bindAdminEvents() {
     creatorSlugInput.value = normalizeCreatorSlug(creatorSlugInput.value);
   });
 
-  creatorForm.addEventListener("submit", saveCreator);
+  creatorForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    void saveCreator(e);
+  });
+  document.getElementById("save-creator-btn").addEventListener("click", () => void saveCreator());
   document.getElementById("clear-creator-form").addEventListener("click", () => {
     clearCreatorForm();
     setMessage(creatorMessage, "");
@@ -438,8 +436,17 @@ function bindAdminEvents() {
     creatorForm.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
-  productForm.addEventListener("submit", saveProduct);
-  promoForm.addEventListener("submit", savePromo);
+  productForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    void saveProduct(e);
+  });
+  document.getElementById("save-product-btn").addEventListener("click", () => void saveProduct());
+
+  promoForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    void savePromo(e);
+  });
+  document.getElementById("save-promo-btn").addEventListener("click", () => void savePromo());
   signOutButton.addEventListener("click", () => signOut(auth));
   document.getElementById("clear-product-form").addEventListener("click", clearProductForm);
 
