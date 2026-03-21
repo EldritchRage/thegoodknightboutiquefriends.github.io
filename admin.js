@@ -394,6 +394,18 @@ async function saveCreator(event) {
 }
 
 function bindAdminEvents() {
+  // Block native form navigation (GET/POST reload) before any bubble handler runs.
+  // Without this, a missed preventDefault looks like "kicked to home / logged out" and saves never finish.
+  document.querySelectorAll("form").forEach((form) => {
+    form.addEventListener(
+      "submit",
+      (e) => {
+        e.preventDefault();
+      },
+      { capture: true }
+    );
+  });
+
   creatorSlugInput.addEventListener("blur", () => {
     if (creatorSlugInput.readOnly) {
       return;
