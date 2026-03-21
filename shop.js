@@ -334,11 +334,14 @@ function renderCart() {
 }
 
 function bindEvents() {
-  document.querySelectorAll(".category-button").forEach((button) => {
-    button.addEventListener("click", () => renderCatalog(button.dataset.category));
-  });
-
   document.addEventListener("click", (event) => {
+    const catBtn = event.target.closest(".category-button");
+    if (catBtn && catBtn.dataset.category) {
+      event.preventDefault();
+      renderCatalog(catBtn.dataset.category);
+      return;
+    }
+
     const detailsButton = event.target.closest(".details-btn");
     if (detailsButton) {
       const productId = detailsButton.dataset.id;

@@ -104,6 +104,24 @@ function normalizeCreatorSlug(value) {
     .replace(/^-+|-+$/g, "");
 }
 
+/** Product / promo / creator panels use divs (not form) so Edge never performs a native submit/reload. */
+function fieldByName(root, name) {
+  return root.querySelector(`[name="${name}"]`);
+}
+
+function bindEnterToSave(container, saveFn) {
+  container.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") {
+      return;
+    }
+    if (e.target.tagName === "TEXTAREA") {
+      return;
+    }
+    e.preventDefault();
+    void saveFn();
+  });
+}
+
 async function uploadImageIfNeeded(file) {
   if (!file) {
     return "";
@@ -161,6 +179,18 @@ function populateCreatorSelect() {
     opt.textContent = `${c.displayName || c.id} (${c.id})`;
     productCreatorSelect.appendChild(opt);
   });
+}
+
+function resetProductFormFields() {
+  fieldByName(productForm, "productId").value = "";
+  fieldByName(productForm, "name").value = "";
+  fieldByName(productForm, "price").value = "";
+  productCreatorSelect.value = "";
+  categorySelect.value = "";
+  fieldByName(productForm, "description").value = "";
+  imageUrlInput.value = "";
+  imageFileInput.value = "";
+  fieldByName(productForm, "featured").checked = false;
 }
 
 function ensureCreatorOption(creatorId) {
@@ -255,22 +285,21 @@ async function syncAuthUI(user) {
 }
 
 function fillProductForm(product) {
-  productForm.elements.productId.value = product.id;
-  productForm.elements.name.value = product.name || "";
-  productForm.elements.price.value = product.price || "";
+  fieldByName(productForm, "productId").value = product.id;
+  fieldByName(productForm, "name").value = product.name || "";
+  fieldByName(productForm, "price").value = product.price || "";
   const cid = product.creatorId || "shelby";
   ensureCreatorOption(cid);
-  productForm.elements.creatorId.value = cid;
-  productForm.elements.categoryId.value = product.categoryId || "";
-  productForm.elements.description.value = product.description || "";
+  productCreatorSelect.value = cid;
+  categorySelect.value = product.categoryId || "";
+  fieldByName(productForm, "description").value = product.description || "";
   imageUrlInput.value = product.imageUrl || "";
-  productForm.elements.featured.checked = Boolean(product.featured);
+  fieldByName(productForm, "featured").checked = Boolean(product.featured);
   productForm.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function clearProductForm() {
-  productForm.reset();
-  productForm.elements.productId.value = "";
+  resetProductFormFields();
 }
 
 async function saveProduct(event) {
@@ -279,13 +308,13 @@ async function saveProduct(event) {
   }
   setMessage(productMessage, "Saving product...");
 
-  const productId = productForm.elements.productId.value.trim();
-  const name = productForm.elements.name.value.trim();
-  const price = Number(productForm.elements.price.value);
-  const creatorId = productForm.elements.creatorId.value.trim();
-  const categoryId = productForm.elements.categoryId.value;
-  const description = productForm.elements.description.value.trim();
-  const featured = productForm.elements.featured.checked;
+  const productId = fieldByName(productForm, "productId").value.trim();
+  const name = fieldByName(productForm, "name").value.trim();
+  const price = Number(fieldByName(productForm, "price").value);
+  const creatorId = productCreatorSelect.value.trim();
+  const categoryId = categorySelect.value;
+  const description = fieldByName(productForm, "description").value.trim();
+  const featured = fieldByName(productForm, "featured").checked;
   const file = imageFileInput.files[0];
 
   if (!name || !creatorId || !categoryId || Number.isNaN(price)) {
@@ -335,10 +364,10 @@ async function savePromo(event) {
   }
   setMessage(promoMessage, "Saving promo...");
 
-  const title = promoForm.elements.title.value.trim();
-  const message = promoForm.elements.message.value.trim();
-  const buttonLabel = promoForm.elements.buttonLabel.value.trim();
-  const buttonUrl = promoForm.elements.buttonUrl.value.trim();
+  const title = fieldByName(promoForm, "title").value.trim();
+  const message = fieldByName(promoForm, "message").value.trim();
+  const buttonLabel = fieldByName(promoForm, "buttonLabel").value.trim();
+  const buttonUrl = fieldByName(promoForm, "buttonUrl").value.trim();
 
   try {
     await setDoc(doc(db, "siteContent", "homepagePromo"), {
@@ -356,9 +385,11 @@ async function savePromo(event) {
 }
 
 function clearCreatorForm() {
-  creatorForm.reset();
   creatorEditingId.value = "";
+  creatorSlugInput.value = "";
   creatorSlugInput.readOnly = false;
+  fieldByName(creatorForm, "displayName").value = "";
+  fieldByName(creatorForm, "paypalClientId").value = "";
 }
 
 async function saveCreator(event) {
@@ -369,8 +400,8 @@ async function saveCreator(event) {
 
   const editing = creatorEditingId.value.trim();
   const slug = normalizeCreatorSlug(creatorSlugInput.value);
-  const displayName = creatorForm.elements.displayName.value.trim();
-  const paypalId = creatorForm.elements.paypalClientId.value.trim();
+  const displayName = fieldByName(creatorForm, "displayName").value.trim();
+  const paypalId = fieldByName(creatorForm, "paypalClientId").value.trim();
 
   if (!slug || !displayName || !paypalId) {
     setMessage(creatorMessage, "Creator ID, display name, and PayPal Client ID are required.", true);
@@ -407,11 +438,8 @@ function bindAdminEvents() {
     creatorSlugInput.value = normalizeCreatorSlug(creatorSlugInput.value);
   });
 
-  creatorForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    void saveCreator(e);
-  });
   document.getElementById("save-creator-btn").addEventListener("click", () => void saveCreator());
+  bindEnterToSave(creatorForm, saveCreator);
   document.getElementById("clear-creator-form").addEventListener("click", () => {
     clearCreatorForm();
     setMessage(creatorMessage, "");
@@ -430,23 +458,17 @@ function bindAdminEvents() {
     creatorEditingId.value = row.id;
     creatorSlugInput.value = row.id;
     creatorSlugInput.readOnly = true;
-    creatorForm.elements.displayName.value = row.displayName || "";
-    creatorForm.elements.paypalClientId.value = row.paypalClientId || "";
+    fieldByName(creatorForm, "displayName").value = row.displayName || "";
+    fieldByName(creatorForm, "paypalClientId").value = row.paypalClientId || "";
     setMessage(creatorMessage, `Editing ${row.id}. Save to update, or click New creator.`);
     creatorForm.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
-  productForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    void saveProduct(e);
-  });
   document.getElementById("save-product-btn").addEventListener("click", () => void saveProduct());
+  bindEnterToSave(productForm, saveProduct);
 
-  promoForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    void savePromo(e);
-  });
   document.getElementById("save-promo-btn").addEventListener("click", () => void savePromo());
+  bindEnterToSave(promoForm, savePromo);
   signOutButton.addEventListener("click", () => signOut(auth));
   document.getElementById("clear-product-form").addEventListener("click", clearProductForm);
 
