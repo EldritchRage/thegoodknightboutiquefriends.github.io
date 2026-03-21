@@ -211,10 +211,47 @@ async function refreshCreators() {
 }
 
 async function refreshProducts() {
-  const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
-  const snaps = await getDocs(q);
-  productsCache = snaps.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+  try {
+    const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
+    const snaps = await getDocs(q);
+    productsCache = snaps.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+  } catch (error) {
+    console.error("Products query (ordered) failed, retrying without order:", error);
+    const snaps = await getDocs(collection(db, "products"));
+    productsCache = snaps.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+  }
   renderProducts();
+}
+
+/**
+ * Single place that shows either the sign-in panel or the admin dashboard.
+ * Called from onAuthStateChanged and again after sign-in/register so the UI
+ * updates even if the auth listener is delayed or a Firestore call throws.
+ */
+async function syncAuthUI(user) {
+  if (!user) {
+    authPanel.classList.remove("hidden");
+    adminPanel.classList.add("hidden");
+    userLabel.textContent = "";
+    return;
+  }
+
+  userLabel.textContent = user.email || "";
+  authPanel.classList.add("hidden");
+  adminPanel.classList.remove("hidden");
+
+  try {
+    await refreshCreators();
+    await refreshProducts();
+    setMessage(authMessage, "");
+  } catch (error) {
+    console.error(error);
+    setMessage(
+      authMessage,
+      "Signed in, but loading creators/products failed. Check Firestore rules (creators + products), your connection, then refresh the page.",
+      true
+    );
+  }
 }
 
 function fillProductForm(product) {
@@ -428,8 +465,9 @@ function bindAuthEvents() {
     const password = registerForm.elements.password.value;
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-      setMessage(authMessage, "Admin account created. You are now signed in.");
       registerForm.reset();
+      setMessage(authMessage, "Account created.");
+      await syncAuthUI(auth.currentUser);
     } catch (error) {
       setMessage(authMessage, error.message, true);
     }
@@ -441,8 +479,9 @@ function bindAuthEvents() {
     const password = loginForm.elements.password.value;
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      setMessage(authMessage, "Signed in.");
       loginForm.reset();
+      setMessage(authMessage, "Signed in.");
+      await syncAuthUI(auth.currentUser);
     } catch (error) {
       setMessage(authMessage, error.message, true);
     }
@@ -457,18 +496,7 @@ if (!isFirebaseReady) {
   bindAuthEvents();
   bindAdminEvents();
 
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      authPanel.classList.remove("hidden");
-      adminPanel.classList.add("hidden");
-      userLabel.textContent = "";
-      return;
-    }
-
-    userLabel.textContent = user.email;
-    authPanel.classList.add("hidden");
-    adminPanel.classList.remove("hidden");
-    await refreshCreators();
-    await refreshProducts();
+  onAuthStateChanged(auth, (user) => {
+    void syncAuthUI(user);
   });
 }
