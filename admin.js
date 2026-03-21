@@ -104,22 +104,8 @@ function normalizeCreatorSlug(value) {
     .replace(/^-+|-+$/g, "");
 }
 
-/** Product / promo / creator panels use divs (not form) so Edge never performs a native submit/reload. */
 function fieldByName(root, name) {
   return root.querySelector(`[name="${name}"]`);
-}
-
-function bindEnterToSave(container, saveFn) {
-  container.addEventListener("keydown", (e) => {
-    if (e.key !== "Enter") {
-      return;
-    }
-    if (e.target.tagName === "TEXTAREA") {
-      return;
-    }
-    e.preventDefault();
-    void saveFn();
-  });
 }
 
 async function uploadImageIfNeeded(file) {
@@ -181,17 +167,6 @@ function populateCreatorSelect() {
   });
 }
 
-function resetProductFormFields() {
-  fieldByName(productForm, "productId").value = "";
-  fieldByName(productForm, "name").value = "";
-  fieldByName(productForm, "price").value = "";
-  productCreatorSelect.value = "";
-  categorySelect.value = "";
-  fieldByName(productForm, "description").value = "";
-  imageUrlInput.value = "";
-  imageFileInput.value = "";
-  fieldByName(productForm, "featured").checked = false;
-}
 
 function ensureCreatorOption(creatorId) {
   if (!creatorId) {
@@ -299,23 +274,43 @@ function fillProductForm(product) {
 }
 
 function clearProductForm() {
-  resetProductFormFields();
+  productForm.reset();
+  fieldByName(productForm, "productId").value = "";
 }
 
 async function saveProduct(event) {
   if (event && typeof event.preventDefault === "function") {
     event.preventDefault();
   }
+  if (!auth?.currentUser) {
+    setMessage(productMessage, "You are not signed in. Please sign in again.", true);
+    return;
+  }
+
   setMessage(productMessage, "Saving product...");
 
-  const productId = fieldByName(productForm, "productId").value.trim();
-  const name = fieldByName(productForm, "name").value.trim();
-  const price = Number(fieldByName(productForm, "price").value);
-  const creatorId = productCreatorSelect.value.trim();
-  const categoryId = categorySelect.value;
-  const description = fieldByName(productForm, "description").value.trim();
-  const featured = fieldByName(productForm, "featured").checked;
-  const file = imageFileInput.files[0];
+  let productId;
+  let name;
+  let price;
+  let creatorId;
+  let categoryId;
+  let description;
+  let featured;
+  let file;
+  try {
+    productId = fieldByName(productForm, "productId").value.trim();
+    name = fieldByName(productForm, "name").value.trim();
+    price = Number(fieldByName(productForm, "price").value);
+    creatorId = productCreatorSelect.value.trim();
+    categoryId = categorySelect.value;
+    description = fieldByName(productForm, "description").value.trim();
+    featured = fieldByName(productForm, "featured").checked;
+    file = imageFileInput.files[0];
+  } catch (readErr) {
+    console.error(readErr);
+    setMessage(productMessage, "Could not read the form. Refresh the page and try again.", true);
+    return;
+  }
 
   if (!name || !creatorId || !categoryId || Number.isNaN(price)) {
     setMessage(productMessage, "Name, seller, price, and category are required.", true);
@@ -362,6 +357,10 @@ async function savePromo(event) {
   if (event && typeof event.preventDefault === "function") {
     event.preventDefault();
   }
+  if (!auth?.currentUser) {
+    setMessage(promoMessage, "You are not signed in. Please sign in again.", true);
+    return;
+  }
   setMessage(promoMessage, "Saving promo...");
 
   const title = fieldByName(promoForm, "title").value.trim();
@@ -395,6 +394,10 @@ function clearCreatorForm() {
 async function saveCreator(event) {
   if (event && typeof event.preventDefault === "function") {
     event.preventDefault();
+  }
+  if (!auth?.currentUser) {
+    setMessage(creatorMessage, "You are not signed in. Please sign in again.", true);
+    return;
   }
   setMessage(creatorMessage, "Saving creator…");
 
@@ -439,7 +442,11 @@ function bindAdminEvents() {
   });
 
   document.getElementById("save-creator-btn").addEventListener("click", () => void saveCreator());
-  bindEnterToSave(creatorForm, saveCreator);
+  creatorForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    void saveCreator(e);
+  });
   document.getElementById("clear-creator-form").addEventListener("click", () => {
     clearCreatorForm();
     setMessage(creatorMessage, "");
@@ -465,10 +472,18 @@ function bindAdminEvents() {
   });
 
   document.getElementById("save-product-btn").addEventListener("click", () => void saveProduct());
-  bindEnterToSave(productForm, saveProduct);
+  productForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    void saveProduct(e);
+  });
 
   document.getElementById("save-promo-btn").addEventListener("click", () => void savePromo());
-  bindEnterToSave(promoForm, savePromo);
+  promoForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    void savePromo(e);
+  });
   signOutButton.addEventListener("click", () => signOut(auth));
   document.getElementById("clear-product-form").addEventListener("click", clearProductForm);
 
