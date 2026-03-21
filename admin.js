@@ -549,10 +549,17 @@ if (!isFirebaseReady) {
   authPanel.classList.add("hidden");
   adminPanel.classList.add("hidden");
 } else {
-  bindAuthEvents();
-  bindAdminEvents();
-
+  // Register auth listener FIRST. If bindAdminEvents() threw, we used to never attach
+  // onAuthStateChanged — admin-panel stayed hidden even when Firebase had a signed-in user.
   onAuthStateChanged(auth, (user) => {
     void syncAuthUI(user);
   });
+
+  bindAuthEvents();
+
+  try {
+    bindAdminEvents();
+  } catch (err) {
+    console.error("Admin dashboard bindings failed (products/creators may not work):", err);
+  }
 }
