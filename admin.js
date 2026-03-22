@@ -72,18 +72,23 @@ const creatorForm = document.getElementById("creator-form");
 const creatorMessage = document.getElementById("creator-message");
 const creatorsList = document.getElementById("creators-list");
 const creatorEditingId = document.getElementById("creator-editing-id");
-const creatorSlugInput = document.getElementById("creator-slug-input");
+// Older deploys may omit id="creator-slug-input"; still match by form + name.
+const creatorSlugInput =
+  document.getElementById("creator-slug-input") ||
+  (creatorForm && creatorForm.querySelector('[name="slug"]'));
 const productCreatorSelect = document.getElementById("product-creator");
 
 let productsCache = [];
 let creatorsCache = [];
 
-Object.entries(categoryLabels).forEach(([value, label]) => {
-  const option = document.createElement("option");
-  option.value = value;
-  option.textContent = label;
-  categorySelect.appendChild(option);
-});
+if (categorySelect) {
+  Object.entries(categoryLabels).forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    categorySelect.appendChild(option);
+  });
+}
 
 function setMessage(element, text, isError = false) {
   element.textContent = text;
@@ -124,6 +129,9 @@ function creatorDisplayName(creatorId) {
 }
 
 function renderProducts() {
+  if (!productsList) {
+    return;
+  }
   if (!productsCache.length) {
     productsList.innerHTML = "<p class='muted'>No products yet. Add your first listing above.</p>";
     return;
@@ -155,6 +163,9 @@ function renderProducts() {
 }
 
 function populateCreatorSelect() {
+  if (!productCreatorSelect) {
+    return;
+  }
   productCreatorSelect.innerHTML = '<option value="">Seller / creator</option>';
   const sorted = [...creatorsCache].sort((a, b) =>
     (a.displayName || a.id).localeCompare(b.displayName || b.id, undefined, { sensitivity: "base" })
@@ -169,7 +180,7 @@ function populateCreatorSelect() {
 
 
 function ensureCreatorOption(creatorId) {
-  if (!creatorId) {
+  if (!creatorId || !productCreatorSelect) {
     return;
   }
   const exists = Array.from(productCreatorSelect.options).some((o) => o.value === creatorId);
@@ -182,6 +193,9 @@ function ensureCreatorOption(creatorId) {
 }
 
 function renderCreatorsList() {
+  if (!creatorsList) {
+    return;
+  }
   if (!creatorsCache.length) {
     creatorsList.innerHTML =
       "<p class='muted'>No creators yet. Add one (e.g. ID <code>shelby</code>) and paste that creator's PayPal Client ID.</p>";
@@ -286,6 +300,14 @@ async function saveProduct(event) {
     setMessage(productMessage, "You are not signed in. Please sign in again.", true);
     return;
   }
+  if (!productForm || !categorySelect || !productCreatorSelect) {
+    setMessage(
+      productMessage,
+      "Product form is missing from the page. Deploy the latest admin.html (product form + category + seller fields).",
+      true
+    );
+    return;
+  }
 
   setMessage(productMessage, "Saving product...");
 
@@ -384,11 +406,17 @@ async function savePromo(event) {
 }
 
 function clearCreatorForm() {
-  creatorEditingId.value = "";
-  creatorSlugInput.value = "";
-  creatorSlugInput.readOnly = false;
-  fieldByName(creatorForm, "displayName").value = "";
-  fieldByName(creatorForm, "paypalClientId").value = "";
+  if (creatorEditingId) {
+    creatorEditingId.value = "";
+  }
+  if (creatorSlugInput) {
+    creatorSlugInput.value = "";
+    creatorSlugInput.readOnly = false;
+  }
+  if (creatorForm) {
+    fieldByName(creatorForm, "displayName").value = "";
+    fieldByName(creatorForm, "paypalClientId").value = "";
+  }
 }
 
 async function saveCreator(event) {
@@ -400,6 +428,11 @@ async function saveCreator(event) {
     return;
   }
   setMessage(creatorMessage, "Saving creator…");
+
+  if (!creatorSlugInput || !creatorForm || !creatorEditingId) {
+    setMessage(creatorMessage, "Creator form is missing from the page. Deploy the latest admin.html.", true);
+    return;
+  }
 
   const editing = creatorEditingId.value.trim();
   const slug = normalizeCreatorSlug(creatorSlugInput.value);
@@ -434,84 +467,113 @@ async function saveCreator(event) {
 }
 
 function bindAdminEvents() {
-  creatorSlugInput.addEventListener("blur", () => {
-    if (creatorSlugInput.readOnly) {
-      return;
-    }
-    creatorSlugInput.value = normalizeCreatorSlug(creatorSlugInput.value);
-  });
+  // Bind products/promo first so a missing creator DOM never blocks saving listings.
+  const saveProductBtn = document.getElementById("save-product-btn");
+  if (saveProductBtn && productForm) {
+    saveProductBtn.addEventListener("click", () => void saveProduct());
+    productForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      void saveProduct(e);
+    });
+  }
 
-  document.getElementById("save-creator-btn").addEventListener("click", () => void saveCreator());
-  creatorForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    void saveCreator(e);
-  });
-  document.getElementById("clear-creator-form").addEventListener("click", () => {
-    clearCreatorForm();
-    setMessage(creatorMessage, "");
-  });
+  const savePromoBtn = document.getElementById("save-promo-btn");
+  if (savePromoBtn && promoForm) {
+    savePromoBtn.addEventListener("click", () => void savePromo());
+    promoForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      void savePromo(e);
+    });
+  }
 
-  creatorsList.addEventListener("click", (event) => {
-    const btn = event.target.closest(".edit-creator-btn");
-    if (!btn) {
-      return;
-    }
-    const id = btn.dataset.id;
-    const row = creatorsCache.find((c) => c.id === id);
-    if (!row) {
-      return;
-    }
-    creatorEditingId.value = row.id;
-    creatorSlugInput.value = row.id;
-    creatorSlugInput.readOnly = true;
-    fieldByName(creatorForm, "displayName").value = row.displayName || "";
-    fieldByName(creatorForm, "paypalClientId").value = row.paypalClientId || "";
-    setMessage(creatorMessage, `Editing ${row.id}. Save to update, or click New creator.`);
-    creatorForm.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
+  if (signOutButton) {
+    signOutButton.addEventListener("click", () => signOut(auth));
+  }
 
-  document.getElementById("save-product-btn").addEventListener("click", () => void saveProduct());
-  productForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    void saveProduct(e);
-  });
+  const clearProductFormBtn = document.getElementById("clear-product-form");
+  if (clearProductFormBtn) {
+    clearProductFormBtn.addEventListener("click", clearProductForm);
+  }
 
-  document.getElementById("save-promo-btn").addEventListener("click", () => void savePromo());
-  promoForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    void savePromo(e);
-  });
-  signOutButton.addEventListener("click", () => signOut(auth));
-  document.getElementById("clear-product-form").addEventListener("click", clearProductForm);
-
-  productsList.addEventListener("click", async (event) => {
-    const editButton = event.target.closest(".edit-btn");
-    if (editButton) {
-      const target = productsCache.find((item) => item.id === editButton.dataset.id);
-      if (target) {
-        fillProductForm(target);
-      }
-      return;
-    }
-
-    const deleteButton = event.target.closest(".delete-btn");
-    if (deleteButton) {
-      const approved = window.confirm("Delete this product?");
-      if (!approved) {
+  if (productsList) {
+    productsList.addEventListener("click", async (event) => {
+      const editButton = event.target.closest(".edit-btn");
+      if (editButton) {
+        const target = productsCache.find((item) => item.id === editButton.dataset.id);
+        if (target) {
+          fillProductForm(target);
+        }
         return;
       }
-      try {
-        await deleteDoc(doc(db, "products", deleteButton.dataset.id));
-        await refreshProducts();
-      } catch (error) {
-        console.error(error);
-        setMessage(productMessage, "Could not delete product.", true);
+
+      const deleteButton = event.target.closest(".delete-btn");
+      if (deleteButton) {
+        const approved = window.confirm("Delete this product?");
+        if (!approved) {
+          return;
+        }
+        try {
+          await deleteDoc(doc(db, "products", deleteButton.dataset.id));
+          await refreshProducts();
+        } catch (error) {
+          console.error(error);
+          setMessage(productMessage, "Could not delete product.", true);
+        }
       }
-    }
-  });
+    });
+  }
+
+  if (creatorSlugInput) {
+    creatorSlugInput.addEventListener("blur", () => {
+      if (creatorSlugInput.readOnly) {
+        return;
+      }
+      creatorSlugInput.value = normalizeCreatorSlug(creatorSlugInput.value);
+    });
+  }
+
+  const saveCreatorBtn = document.getElementById("save-creator-btn");
+  if (saveCreatorBtn) {
+    saveCreatorBtn.addEventListener("click", () => void saveCreator());
+  }
+  if (creatorForm) {
+    creatorForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      void saveCreator(e);
+    });
+  }
+
+  const clearCreatorFormBtn = document.getElementById("clear-creator-form");
+  if (clearCreatorFormBtn) {
+    clearCreatorFormBtn.addEventListener("click", () => {
+      clearCreatorForm();
+      setMessage(creatorMessage, "");
+    });
+  }
+
+  if (creatorsList && creatorEditingId && creatorSlugInput && creatorForm) {
+    creatorsList.addEventListener("click", (event) => {
+      const btn = event.target.closest(".edit-creator-btn");
+      if (!btn) {
+        return;
+      }
+      const id = btn.dataset.id;
+      const row = creatorsCache.find((c) => c.id === id);
+      if (!row) {
+        return;
+      }
+      creatorEditingId.value = row.id;
+      creatorSlugInput.value = row.id;
+      creatorSlugInput.readOnly = true;
+      fieldByName(creatorForm, "displayName").value = row.displayName || "";
+      fieldByName(creatorForm, "paypalClientId").value = row.paypalClientId || "";
+      setMessage(creatorMessage, `Editing ${row.id}. Save to update, or click New creator.`);
+      creatorForm.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 }
 
 function bindAuthEvents() {
