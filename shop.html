@@ -24,7 +24,7 @@
     <section class="hero">
       <h1>Shelby Knight Shop</h1>
       <p class="muted">Choose a category to open a specific catalog. Click item details to expand each description.</p>
-      <p class="muted">Shelby can manage products, images, and prices from <code>admin.html</code>.</p>
+      <p class="muted">Creators manage their own products from <code>admin.html</code>. Each seller is paid separately via their own PayPal.</p>
     </section>
 
     <section class="shop-layout">
@@ -35,24 +35,24 @@
           <summary>Wearables</summary>
           <details>
             <summary>Apparel</summary>
-            <button class="category-button" data-category="crocheted-outfits">Crocheted Outfits</button>
-            <button class="category-button" data-category="heat-pressed">Heat-Pressed</button>
+            <button type="button" class="category-button" data-category="crocheted-outfits">Crocheted Outfits</button>
+            <button type="button" class="category-button" data-category="heat-pressed">Heat-Pressed</button>
           </details>
           <details>
             <summary>Jewelry</summary>
-            <button class="category-button" data-category="earrings">Earrings</button>
-            <button class="category-button" data-category="necklaces">Necklaces</button>
-            <button class="category-button" data-category="bracelets">Bracelets</button>
-            <button class="category-button" data-category="rings">Rings</button>
-            <button class="category-button" data-category="keychains">Keychains</button>
+            <button type="button" class="category-button" data-category="earrings">Earrings</button>
+            <button type="button" class="category-button" data-category="necklaces">Necklaces</button>
+            <button type="button" class="category-button" data-category="bracelets">Bracelets</button>
+            <button type="button" class="category-button" data-category="rings">Rings</button>
+            <button type="button" class="category-button" data-category="keychains">Keychains</button>
           </details>
           <details>
             <summary>Bags and Accessories</summary>
-            <button class="category-button" data-category="totes">Totes</button>
-            <button class="category-button" data-category="purses">Purses</button>
-            <button class="category-button" data-category="cross-body-bags">Cross Body Bags</button>
-            <button class="category-button" data-category="pouches">Pouches</button>
-            <button class="category-button" data-category="wallets">Wallets</button>
+            <button type="button" class="category-button" data-category="totes">Totes</button>
+            <button type="button" class="category-button" data-category="purses">Purses</button>
+            <button type="button" class="category-button" data-category="cross-body-bags">Cross Body Bags</button>
+            <button type="button" class="category-button" data-category="pouches">Pouches</button>
+            <button type="button" class="category-button" data-category="wallets">Wallets</button>
           </details>
         </details>
 
@@ -60,11 +60,11 @@
           <summary>Drinkware and Kitchen</summary>
           <details open>
             <summary>Sublimated Items</summary>
-            <button class="category-button" data-category="mugs">Mugs</button>
-            <button class="category-button" data-category="tumblers">Tumblers</button>
-            <button class="category-button" data-category="water-bottles">Water Bottles</button>
-            <button class="category-button" data-category="wine-glasses">Wine Glasses</button>
-            <button class="category-button" data-category="coasters">Coasters</button>
+            <button type="button" class="category-button" data-category="mugs">Mugs</button>
+            <button type="button" class="category-button" data-category="tumblers">Tumblers</button>
+            <button type="button" class="category-button" data-category="water-bottles">Water Bottles</button>
+            <button type="button" class="category-button" data-category="wine-glasses">Wine Glasses</button>
+            <button type="button" class="category-button" data-category="coasters">Coasters</button>
           </details>
         </details>
 
@@ -72,19 +72,19 @@
           <summary>3D Printed</summary>
           <details>
             <summary>Home Decor</summary>
-            <button class="category-button" data-category="figurines">Figurines</button>
-            <button class="category-button" data-category="ornaments">Ornaments</button>
-            <button class="category-button" data-category="desk-toys">Desk Toys</button>
-            <button class="category-button" data-category="planters">Planters</button>
-            <button class="category-button" data-category="wall-hooks">Wall Hooks</button>
-            <button class="category-button" data-category="fidget-toys">Fidget Toys</button>
+            <button type="button" class="category-button" data-category="figurines">Figurines</button>
+            <button type="button" class="category-button" data-category="ornaments">Ornaments</button>
+            <button type="button" class="category-button" data-category="desk-toys">Desk Toys</button>
+            <button type="button" class="category-button" data-category="planters">Planters</button>
+            <button type="button" class="category-button" data-category="wall-hooks">Wall Hooks</button>
+            <button type="button" class="category-button" data-category="fidget-toys">Fidget Toys</button>
           </details>
           <details>
             <summary>Function Prints</summary>
-            <button class="category-button" data-category="phone-stands">Phone Stands</button>
-            <button class="category-button" data-category="cable-organizers">Cable Organizers</button>
-            <button class="category-button" data-category="cookie-cutters">Cookie Cutters</button>
-            <button class="category-button" data-category="custom-replacement-parts">Custom Replacement Parts</button>
+            <button type="button" class="category-button" data-category="phone-stands">Phone Stands</button>
+            <button type="button" class="category-button" data-category="cable-organizers">Cable Organizers</button>
+            <button type="button" class="category-button" data-category="cookie-cutters">Cookie Cutters</button>
+            <button type="button" class="category-button" data-category="custom-replacement-parts">Custom Replacement Parts</button>
           </details>
         </details>
       </aside>
@@ -104,6 +104,7 @@
 
     <section id="checkout-section" class="panel hidden" style="margin-top: 1rem;">
       <h3>Checkout</h3>
+      <p class="muted">Enter your shipping details once. If your cart has items from multiple creators, you&apos;ll see a separate PayPal payment for each creator—money goes straight to that creator&apos;s PayPal. Amounts are <strong>subtotals</strong> (shipping may be arranged separately).</p>
       <form id="checkout-form" class="checkout-form">
         <input type="text" name="fullName" placeholder="Full Name" required>
         <input type="text" name="address" placeholder="Shipping Address" required>
@@ -113,19 +114,14 @@
           <option value="expedited">Expedited Shipping</option>
           <option value="overnight">Overnight Shipping</option>
         </select>
-        <select name="paymentMethod" required>
-          <option value="">Payment Method</option>
-          <option value="credit-card">Credit Card</option>
-          <option value="debit-card">Debit Card</option>
-          <option value="paypal">PayPal</option>
-        </select>
-        <button type="submit" class="button">Make Purchase</button>
       </form>
+      <p id="paypal-config-placeholder" class="muted hidden" style="margin-top: 1rem;">One or more creators need a PayPal Client ID. In Admin → Creators &amp; PayPal, add each creator, or set <code>paypal-config.js</code> as a fallback for Shelby (<code>shelby</code>) only.</p>
+      <div id="paypal-sellers-container"></div>
     </section>
 
     <section id="thank-you" class="hero hidden">
       <h2>Thank you for your purchase!</h2>
-      <p class="muted">Your order has been received. Shelby Knight will prepare your items soon.</p>
+      <p class="muted">Your payment is complete and the creator(s) will be notified. They&apos;ll prepare your items soon.</p>
     </section>
   </main>
 
