@@ -15,7 +15,7 @@ async function loadPromo() {
   }
 
   try {
-    const promoRef = doc(db, "siteContent", "homepagePromo");
+    const promoRef = doc(db, "siteConfig", "homepage");
     const snap = await getDoc(promoRef);
 
     if (!snap.exists()) {
@@ -26,12 +26,12 @@ async function loadPromo() {
     }
 
     const data = snap.data();
-    promoTitle.textContent = data.title || "Seasonal Spotlight";
-    promoText.textContent = data.message || "Check back for new offers.";
+    promoTitle.textContent = data.promoTitle || "Seasonal Spotlight";
+    promoText.textContent = data.promoMessage || "Check back for new offers.";
 
-    if (data.buttonLabel && data.buttonUrl) {
-      promoButton.textContent = data.buttonLabel;
-      promoButton.href = data.buttonUrl;
+    if (data.promoButtonText && data.promoButtonLink) {
+      promoButton.textContent = data.promoButtonText;
+      promoButton.href = data.promoButtonLink;
       promoButton.classList.remove("hidden");
     } else {
       promoButton.classList.add("hidden");
@@ -40,7 +40,7 @@ async function loadPromo() {
     promoTitle.textContent = "Seasonal Spotlight";
     promoText.textContent = "Promo panel could not load right now.";
     promoButton.classList.add("hidden");
-    console.error(error);
+    console.error("loadPromo failed", error);
   }
 }
 

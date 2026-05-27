@@ -6,15 +6,15 @@ import {
   signOut
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
-  getDocs,
+  onSnapshot,
   orderBy,
   query,
   serverTimestamp,
-  setDoc
+  setDoc,
+  getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import {
   getDownloadURL,
@@ -68,70 +68,38 @@ const productMessage = document.getElementById("product-message");
 const promoForm = document.getElementById("promo-form");
 const promoMessage = document.getElementById("promo-message");
 const categorySelect = document.getElementById("product-category");
-const creatorForm = document.getElementById("creator-form");
-const creatorMessage = document.getElementById("creator-message");
-const creatorsList = document.getElementById("creators-list");
-const creatorEditingId = document.getElementById("creator-editing-id");
-// Older deploys may omit id="creator-slug-input"; still match by form + name.
-const creatorSlugInput =
-  document.getElementById("creator-slug-input") ||
-  (creatorForm && creatorForm.querySelector('[name="slug"]'));
-const productCreatorSelect = document.getElementById("product-creator");
 
 let productsCache = [];
-let creatorsCache = [];
 
-if (categorySelect) {
-  Object.entries(categoryLabels).forEach(([value, label]) => {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = label;
-    categorySelect.appendChild(option);
-  });
-}
+Object.entries(categoryLabels).forEach(([value, label]) => {
+  const option = document.createElement("option");
+  option.value = value;
+  option.textContent = label;
+  categorySelect.appendChild(option);
+});
 
 function setMessage(element, text, isError = false) {
   element.textContent = text;
   element.style.color = isError ? "#fca5a5" : "#9ba7bf";
 }
 
-function escapeHtml(s) {
-  const div = document.createElement("div");
-  div.textContent = s;
-  return div.innerHTML;
-}
-
-function normalizeCreatorSlug(value) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function fieldByName(root, name) {
-  return root.querySelector(`[name="${name}"]`);
-}
-
-async function uploadImageIfNeeded(file) {
-  if (!file) {
+async function uploadProductImage(docId, file) {
+  if (!file || !docId) {
     return "";
   }
-  const cleanName = file.name.replace(/\s+/g, "-").toLowerCase();
-  const imageRef = ref(storage, `product-images/${Date.now()}-${cleanName}`);
-  await uploadBytes(imageRef, file);
-  return getDownloadURL(imageRef);
-}
-
-function creatorDisplayName(creatorId) {
-  const row = creatorsCache.find((c) => c.id === creatorId);
-  return row?.displayName || creatorId || "—";
+  try {
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const cleanExt = ext.replace(/[^a-z0-9]/gi, "") || "jpg";
+    const imageRef = ref(storage, `products/${docId}.${cleanExt}`);
+    await uploadBytes(imageRef, file);
+    return await getDownloadURL(imageRef);
+  } catch (error) {
+    console.error("uploadProductImage failed", error);
+    throw error;
+  }
 }
 
 function renderProducts() {
-  if (!productsList) {
-    return;
-  }
   if (!productsCache.length) {
     productsList.innerHTML = "<p class='muted'>No products yet. Add your first listing above.</p>";
     return;
@@ -139,15 +107,12 @@ function renderProducts() {
 
   productsList.innerHTML = productsCache
     .map(
-      (product) => {
-        const cid = product.creatorId || "shelby";
-        return `
+      (product) => `
         <article class="admin-product">
-          <img src="${product.imageUrl || "https://via.placeholder.com/300x200?text=No+Image"}" alt="${escapeHtml(product.name)}">
+          <img src="${product.imageUrl || "https://via.placeholder.com/300x200?text=No+Image"}" alt="${product.name}">
           <div>
-            <h4>${escapeHtml(product.name)}</h4>
-            <p class="muted">Seller: ${escapeHtml(creatorDisplayName(cid))} (${escapeHtml(cid)})</p>
-            <p class="muted">${categoryLabels[product.categoryId] || product.categoryId}</p>
+            <h4>${product.name}</h4>
+            <p class="muted">${categoryLabels[product.category] || product.category}</p>
             <p>${product.description || ""}</p>
             <p><strong>$${Number(product.price).toFixed(2)}</strong></p>
             <div class="product-actions">
@@ -156,424 +121,155 @@ function renderProducts() {
             </div>
           </div>
         </article>
-      `;
-      }
+      `
     )
     .join("");
 }
 
-function populateCreatorSelect() {
-  if (!productCreatorSelect) {
-    return;
-  }
-  productCreatorSelect.innerHTML = '<option value="">Seller / creator</option>';
-  const sorted = [...creatorsCache].sort((a, b) =>
-    (a.displayName || a.id).localeCompare(b.displayName || b.id, undefined, { sensitivity: "base" })
-  );
-  sorted.forEach((c) => {
-    const opt = document.createElement("option");
-    opt.value = c.id;
-    opt.textContent = `${c.displayName || c.id} (${c.id})`;
-    productCreatorSelect.appendChild(opt);
-  });
-}
-
-
-function ensureCreatorOption(creatorId) {
-  if (!creatorId || !productCreatorSelect) {
-    return;
-  }
-  const exists = Array.from(productCreatorSelect.options).some((o) => o.value === creatorId);
-  if (!exists) {
-    const opt = document.createElement("option");
-    opt.value = creatorId;
-    opt.textContent = `${creatorId} (add in Creators & PayPal)`;
-    productCreatorSelect.appendChild(opt);
-  }
-}
-
-function renderCreatorsList() {
-  if (!creatorsList) {
-    return;
-  }
-  if (!creatorsCache.length) {
-    creatorsList.innerHTML =
-      "<p class='muted'>No creators yet. Add one (e.g. ID <code>shelby</code>) and paste that creator's PayPal Client ID.</p>";
-    return;
-  }
-
-  const sorted = [...creatorsCache].sort((a, b) =>
-    (a.displayName || a.id).localeCompare(b.displayName || b.id, undefined, { sensitivity: "base" })
-  );
-
-  creatorsList.innerHTML = sorted
-    .map((c) => {
-      const tail = c.paypalClientId
-        ? `…${escapeHtml(String(c.paypalClientId).slice(-10))}`
-        : "missing";
-      return `
-      <article class="admin-creator-row">
-        <div><strong>${escapeHtml(c.displayName || c.id)}</strong> <span class="muted">(${escapeHtml(c.id)})</span></div>
-        <p class="muted">PayPal Client ID: ${tail}</p>
-        <button type="button" class="button secondary edit-creator-btn" data-id="${c.id}">Edit</button>
-      </article>
-    `;
-    })
-    .join("");
-}
-
-async function refreshCreators() {
-  const snaps = await getDocs(collection(db, "creators"));
-  creatorsCache = snaps.docs.map((d) => ({ id: d.id, ...d.data() }));
-  renderCreatorsList();
-  populateCreatorSelect();
-}
-
-async function refreshProducts() {
-  try {
-    const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
-    const snaps = await getDocs(q);
-    productsCache = snaps.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
-  } catch (error) {
-    console.error("Products query (ordered) failed, retrying without order:", error);
-    const snaps = await getDocs(collection(db, "products"));
-    productsCache = snaps.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
-  }
-  renderProducts();
-}
-
-/**
- * Single place that shows either the sign-in panel or the admin dashboard.
- * Called from onAuthStateChanged and again after sign-in/register so the UI
- * updates even if the auth listener is delayed or a Firestore call throws.
- */
-async function syncAuthUI(user) {
-  if (!user) {
-    authPanel.classList.remove("hidden");
-    adminPanel.classList.add("hidden");
-    userLabel.textContent = "";
-    return;
-  }
-
-  userLabel.textContent = user.email || "";
-  authPanel.classList.add("hidden");
-  adminPanel.classList.remove("hidden");
-
-  try {
-    await refreshCreators();
-    await refreshProducts();
-    setMessage(authMessage, "");
-  } catch (error) {
-    console.error(error);
-    setMessage(
-      authMessage,
-      "Signed in, but loading creators/products failed. Check Firestore rules (creators + products), your connection, then refresh the page.",
-      true
-    );
-  }
-}
-
 function fillProductForm(product) {
-  fieldByName(productForm, "productId").value = product.id;
-  fieldByName(productForm, "name").value = product.name || "";
-  fieldByName(productForm, "price").value = product.price || "";
-  const cid = product.creatorId || "shelby";
-  ensureCreatorOption(cid);
-  productCreatorSelect.value = cid;
-  categorySelect.value = product.categoryId || "";
-  fieldByName(productForm, "description").value = product.description || "";
+  productForm.elements.productId.value = product.id;
+  productForm.elements.name.value = product.name || "";
+  productForm.elements.price.value = product.price || "";
+  productForm.elements.categoryId.value = product.category || "";
+  productForm.elements.description.value = product.description || "";
   imageUrlInput.value = product.imageUrl || "";
-  fieldByName(productForm, "featured").checked = Boolean(product.featured);
+  productForm.elements.featured.checked = Boolean(product.featured);
   productForm.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function clearProductForm() {
   productForm.reset();
-  fieldByName(productForm, "productId").value = "";
+  productForm.elements.productId.value = "";
 }
 
 async function saveProduct(event) {
-  if (event && typeof event.preventDefault === "function") {
-    event.preventDefault();
-  }
-  if (!auth?.currentUser) {
-    setMessage(productMessage, "You are not signed in. Please sign in again.", true);
-    return;
-  }
-  if (!productForm || !categorySelect || !productCreatorSelect) {
-    setMessage(
-      productMessage,
-      "Product form is missing from the page. Deploy the latest admin.html (product form + category + seller fields).",
-      true
-    );
-    return;
-  }
-
+  event.preventDefault();
   setMessage(productMessage, "Saving product...");
 
-  let productId;
-  let name;
-  let price;
-  let creatorId;
-  let categoryId;
-  let description;
-  let featured;
-  let file;
-  try {
-    productId = fieldByName(productForm, "productId").value.trim();
-    name = fieldByName(productForm, "name").value.trim();
-    price = Number(fieldByName(productForm, "price").value);
-    creatorId = productCreatorSelect.value.trim();
-    categoryId = categorySelect.value;
-    description = fieldByName(productForm, "description").value.trim();
-    featured = fieldByName(productForm, "featured").checked;
-    file = imageFileInput.files[0];
-  } catch (readErr) {
-    console.error(readErr);
-    setMessage(productMessage, "Could not read the form. Refresh the page and try again.", true);
-    return;
-  }
+  const productId = productForm.elements.productId.value.trim();
+  const name = productForm.elements.name.value.trim();
+  const price = Number(productForm.elements.price.value);
+  const category = productForm.elements.categoryId.value;
+  const description = productForm.elements.description.value.trim();
+  const featured = productForm.elements.featured.checked;
+  const file = imageFileInput.files[0];
 
-  if (!name || !creatorId || !categoryId || Number.isNaN(price)) {
-    setMessage(productMessage, "Name, seller, price, and category are required.", true);
+  if (!name || !category || Number.isNaN(price)) {
+    setMessage(productMessage, "Name, price, and category are required.", true);
     return;
   }
 
   try {
+    const productsCol = collection(db, "products");
+    const isUpdate = Boolean(productId);
+    const targetDoc = isUpdate ? doc(db, "products", productId) : doc(productsCol);
     let imageUrl = imageUrlInput.value.trim();
+
     if (file) {
-      imageUrl = await uploadImageIfNeeded(file);
+      imageUrl = await uploadProductImage(targetDoc.id, file);
     }
 
-    const payload = {
+    const basePayload = {
       name,
       price,
-      creatorId,
-      categoryId,
+      category,
       description,
       imageUrl,
-      featured,
-      updatedAt: serverTimestamp()
+      featured: Boolean(featured)
     };
 
-    if (productId) {
-      await setDoc(doc(db, "products", productId), payload, { merge: true });
-      setMessage(productMessage, "Product updated.");
-    } else {
-      await addDoc(collection(db, "products"), {
-        ...payload,
-        createdAt: serverTimestamp()
-      });
-      setMessage(productMessage, "Product created.");
-    }
+    const payload = isUpdate
+      ? {
+          ...basePayload,
+          updatedAt: serverTimestamp()
+        }
+      : {
+          ...basePayload,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+
+    await setDoc(targetDoc, payload, { merge: isUpdate });
+    setMessage(productMessage, isUpdate ? "Product updated." : "Product created.");
 
     clearProductForm();
-    await refreshProducts();
   } catch (error) {
-    console.error(error);
+    console.error("saveProduct failed", error);
     setMessage(productMessage, "Could not save product. Check Firebase config and rules.", true);
   }
 }
 
 async function savePromo(event) {
-  if (event && typeof event.preventDefault === "function") {
-    event.preventDefault();
-  }
-  if (!auth?.currentUser) {
-    setMessage(promoMessage, "You are not signed in. Please sign in again.", true);
-    return;
-  }
+  event.preventDefault();
   setMessage(promoMessage, "Saving promo...");
 
-  const title = fieldByName(promoForm, "title").value.trim();
-  const message = fieldByName(promoForm, "message").value.trim();
-  const buttonLabel = fieldByName(promoForm, "buttonLabel").value.trim();
-  const buttonUrl = fieldByName(promoForm, "buttonUrl").value.trim();
+  const title = promoForm.elements.title.value.trim();
+  const message = promoForm.elements.message.value.trim();
+  const buttonLabel = promoForm.elements.buttonLabel.value.trim();
+  const buttonUrl = promoForm.elements.buttonUrl.value.trim();
 
   try {
-    await setDoc(doc(db, "siteContent", "homepagePromo"), {
-      title,
-      message,
-      buttonLabel,
-      buttonUrl,
+    await setDoc(doc(db, "siteConfig", "homepage"), {
+      promoTitle: title,
+      promoMessage: message,
+      promoButtonText: buttonLabel,
+      promoButtonLink: buttonUrl,
       updatedAt: serverTimestamp()
     });
     setMessage(promoMessage, "Promo panel saved.");
   } catch (error) {
-    console.error(error);
+    console.error("savePromo failed", error);
     setMessage(promoMessage, "Could not save promo.", true);
   }
 }
 
-function clearCreatorForm() {
-  if (creatorEditingId) {
-    creatorEditingId.value = "";
-  }
-  if (creatorSlugInput) {
-    creatorSlugInput.value = "";
-    creatorSlugInput.readOnly = false;
-  }
-  if (creatorForm) {
-    fieldByName(creatorForm, "displayName").value = "";
-    fieldByName(creatorForm, "paypalClientId").value = "";
-  }
-}
-
-async function saveCreator(event) {
-  if (event && typeof event.preventDefault === "function") {
-    event.preventDefault();
-  }
-  if (!auth?.currentUser) {
-    setMessage(creatorMessage, "You are not signed in. Please sign in again.", true);
-    return;
-  }
-  setMessage(creatorMessage, "Saving creator…");
-
-  if (!creatorSlugInput || !creatorForm || !creatorEditingId) {
-    setMessage(creatorMessage, "Creator form is missing from the page. Deploy the latest admin.html.", true);
-    return;
-  }
-
-  const editing = creatorEditingId.value.trim();
-  const slug = normalizeCreatorSlug(creatorSlugInput.value);
-  const displayName = fieldByName(creatorForm, "displayName").value.trim();
-  const paypalId = fieldByName(creatorForm, "paypalClientId").value.trim();
-
-  if (!slug || !displayName || !paypalId) {
-    setMessage(creatorMessage, "Creator ID, display name, and PayPal Client ID are required.", true);
-    return;
-  }
-
-  const docId = editing || slug;
-
+async function loadPromoForForm() {
   try {
-    await setDoc(
-      doc(db, "creators", docId),
-      {
-        displayName,
-        paypalClientId: paypalId,
-        updatedAt: serverTimestamp()
-      },
-      { merge: true }
-    );
-    setMessage(creatorMessage, "Creator saved.");
-    clearCreatorForm();
-    await refreshCreators();
-    renderProducts();
+    const promoRef = doc(db, "siteConfig", "homepage");
+    const snap = await getDoc(promoRef);
+    if (!snap.exists()) {
+      return;
+    }
+    const data = snap.data();
+    promoForm.elements.title.value = data.promoTitle || "";
+    promoForm.elements.message.value = data.promoMessage || "";
+    promoForm.elements.buttonLabel.value = data.promoButtonText || "";
+    promoForm.elements.buttonUrl.value = data.promoButtonLink || "";
   } catch (error) {
-    console.error(error);
-    setMessage(creatorMessage, "Could not save creator. Check Firestore rules.", true);
+    console.error("loadPromoForForm failed", error);
   }
 }
 
 function bindAdminEvents() {
-  // Bind products/promo first so a missing creator DOM never blocks saving listings.
-  const saveProductBtn = document.getElementById("save-product-btn");
-  if (saveProductBtn && productForm) {
-    saveProductBtn.addEventListener("click", () => void saveProduct());
-    productForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      void saveProduct(e);
-    });
-  }
+  productForm.addEventListener("submit", saveProduct);
+  promoForm.addEventListener("submit", savePromo);
+  signOutButton.addEventListener("click", () => signOut(auth));
+  document.getElementById("clear-product-form").addEventListener("click", clearProductForm);
 
-  const savePromoBtn = document.getElementById("save-promo-btn");
-  if (savePromoBtn && promoForm) {
-    savePromoBtn.addEventListener("click", () => void savePromo());
-    promoForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      void savePromo(e);
-    });
-  }
+  productsList.addEventListener("click", async (event) => {
+    const editButton = event.target.closest(".edit-btn");
+    if (editButton) {
+      const target = productsCache.find((item) => item.id === editButton.dataset.id);
+      if (target) {
+        fillProductForm(target);
+      }
+      return;
+    }
 
-  if (signOutButton) {
-    signOutButton.addEventListener("click", () => signOut(auth));
-  }
-
-  const clearProductFormBtn = document.getElementById("clear-product-form");
-  if (clearProductFormBtn) {
-    clearProductFormBtn.addEventListener("click", clearProductForm);
-  }
-
-  if (productsList) {
-    productsList.addEventListener("click", async (event) => {
-      const editButton = event.target.closest(".edit-btn");
-      if (editButton) {
-        const target = productsCache.find((item) => item.id === editButton.dataset.id);
-        if (target) {
-          fillProductForm(target);
-        }
+    const deleteButton = event.target.closest(".delete-btn");
+    if (deleteButton) {
+      const approved = window.confirm("Delete this product?");
+      if (!approved) {
         return;
       }
-
-      const deleteButton = event.target.closest(".delete-btn");
-      if (deleteButton) {
-        const approved = window.confirm("Delete this product?");
-        if (!approved) {
-          return;
-        }
-        try {
-          await deleteDoc(doc(db, "products", deleteButton.dataset.id));
-          await refreshProducts();
-        } catch (error) {
-          console.error(error);
-          setMessage(productMessage, "Could not delete product.", true);
-        }
+      try {
+        await deleteDoc(doc(db, "products", deleteButton.dataset.id));
+      } catch (error) {
+        console.error("delete product failed", error);
+        setMessage(productMessage, "Could not delete product.", true);
       }
-    });
-  }
-
-  if (creatorSlugInput) {
-    creatorSlugInput.addEventListener("blur", () => {
-      if (creatorSlugInput.readOnly) {
-        return;
-      }
-      creatorSlugInput.value = normalizeCreatorSlug(creatorSlugInput.value);
-    });
-  }
-
-  const saveCreatorBtn = document.getElementById("save-creator-btn");
-  if (saveCreatorBtn) {
-    saveCreatorBtn.addEventListener("click", () => void saveCreator());
-  }
-  if (creatorForm) {
-    creatorForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      void saveCreator(e);
-    });
-  }
-
-  const clearCreatorFormBtn = document.getElementById("clear-creator-form");
-  if (clearCreatorFormBtn) {
-    clearCreatorFormBtn.addEventListener("click", () => {
-      clearCreatorForm();
-      setMessage(creatorMessage, "");
-    });
-  }
-
-  if (creatorsList && creatorEditingId && creatorSlugInput && creatorForm) {
-    creatorsList.addEventListener("click", (event) => {
-      const btn = event.target.closest(".edit-creator-btn");
-      if (!btn) {
-        return;
-      }
-      const id = btn.dataset.id;
-      const row = creatorsCache.find((c) => c.id === id);
-      if (!row) {
-        return;
-      }
-      creatorEditingId.value = row.id;
-      creatorSlugInput.value = row.id;
-      creatorSlugInput.readOnly = true;
-      fieldByName(creatorForm, "displayName").value = row.displayName || "";
-      fieldByName(creatorForm, "paypalClientId").value = row.paypalClientId || "";
-      setMessage(creatorMessage, `Editing ${row.id}. Save to update, or click New creator.`);
-      creatorForm.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
+    }
+  });
 }
 
 function bindAuthEvents() {
@@ -583,9 +279,8 @@ function bindAuthEvents() {
     const password = registerForm.elements.password.value;
     try {
       await createUserWithEmailAndPassword(auth, email, password);
+      setMessage(authMessage, "Admin account created. You are now signed in.");
       registerForm.reset();
-      setMessage(authMessage, "Account created.");
-      await syncAuthUI(auth.currentUser);
     } catch (error) {
       setMessage(authMessage, error.message, true);
     }
@@ -597,9 +292,8 @@ function bindAuthEvents() {
     const password = loginForm.elements.password.value;
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      loginForm.reset();
       setMessage(authMessage, "Signed in.");
-      await syncAuthUI(auth.currentUser);
+      loginForm.reset();
     } catch (error) {
       setMessage(authMessage, error.message, true);
     }
@@ -611,17 +305,38 @@ if (!isFirebaseReady) {
   authPanel.classList.add("hidden");
   adminPanel.classList.add("hidden");
 } else {
-  // Register auth listener FIRST. If bindAdminEvents() threw, we used to never attach
-  // onAuthStateChanged — admin-panel stayed hidden even when Firebase had a signed-in user.
-  onAuthStateChanged(auth, (user) => {
-    void syncAuthUI(user);
-  });
-
   bindAuthEvents();
+  bindAdminEvents();
 
-  try {
-    bindAdminEvents();
-  } catch (err) {
-    console.error("Admin dashboard bindings failed (products/creators may not work):", err);
-  }
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      authPanel.classList.remove("hidden");
+      adminPanel.classList.add("hidden");
+      userLabel.textContent = "";
+      return;
+    }
+
+    userLabel.textContent = user.email;
+    authPanel.classList.add("hidden");
+    adminPanel.classList.remove("hidden");
+
+    // Real-time products listener
+    const productsQuery = query(collection(db, "products"), orderBy("createdAt", "desc"));
+    onSnapshot(
+      productsQuery,
+      (snapshot) => {
+        productsCache = snapshot.docs.map((snap) => ({
+          id: snap.id,
+          ...snap.data()
+        }));
+        renderProducts();
+      },
+      (error) => {
+        console.error("products onSnapshot failed", error);
+        setMessage(productMessage, "Could not load products from Firestore.", true);
+      }
+    );
+
+    await loadPromoForForm();
+  });
 }
