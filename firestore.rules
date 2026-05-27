@@ -9,7 +9,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.auth != null;
     }
-    match /creators/{creatorId} {
+    match /siteConfig/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /creators/{document=**} {
       allow read: if true;
       allow write: if request.auth != null;
     }

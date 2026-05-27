@@ -68,8 +68,16 @@ const productMessage = document.getElementById("product-message");
 const promoForm = document.getElementById("promo-form");
 const promoMessage = document.getElementById("promo-message");
 const categorySelect = document.getElementById("product-category");
+const creatorForm = document.getElementById("creator-form");
+const creatorMessage = document.getElementById("creator-message");
+const creatorsList = document.getElementById("creators-list");
+const creatorImageFile = document.getElementById("creator-image-file");
+const creatorImageUrl = document.getElementById("creator-image-url");
+const creatorSaveBtn = document.getElementById("creator-save-btn");
+const productCreatorSelect = document.getElementById("product-creator");
 
 let productsCache = [];
+let creatorsCache = [];
 
 Object.entries(categoryLabels).forEach(([value, label]) => {
   const option = document.createElement("option");
@@ -83,19 +91,146 @@ function setMessage(element, text, isError = false) {
   element.style.color = isError ? "#fca5a5" : "#9ba7bf";
 }
 
+async function uploadImageToPath(storagePath, file) {
+  if (!file || !storagePath) {
+    return "";
+  }
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const cleanExt = ext.replace(/[^a-z0-9]/gi, "") || "jpg";
+  const imageRef = ref(storage, `${storagePath}.${cleanExt}`);
+  await uploadBytes(imageRef, file);
+  return getDownloadURL(imageRef);
+}
+
 async function uploadProductImage(docId, file) {
   if (!file || !docId) {
     return "";
   }
   try {
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-    const cleanExt = ext.replace(/[^a-z0-9]/gi, "") || "jpg";
-    const imageRef = ref(storage, `products/${docId}.${cleanExt}`);
-    await uploadBytes(imageRef, file);
-    return await getDownloadURL(imageRef);
+    return await uploadImageToPath(`products/${docId}`, file);
   } catch (error) {
     console.error("uploadProductImage failed", error);
     throw error;
+  }
+}
+
+async function uploadCreatorImage(docId, file) {
+  if (!file || !docId) {
+    return "";
+  }
+  try {
+    return await uploadImageToPath(`creators/${docId}`, file);
+  } catch (error) {
+    console.error("uploadCreatorImage failed", error);
+    throw error;
+  }
+}
+
+function renderCreators() {
+  productCreatorSelect.innerHTML = '<option value="">Seller / Creator</option>';
+  creatorsCache.forEach((creator) => {
+    const option = document.createElement("option");
+    option.value = creator.id;
+    option.textContent = creator.name;
+    productCreatorSelect.appendChild(option);
+  });
+
+  if (creatorsCache.length === 1) {
+    productCreatorSelect.value = creatorsCache[0].id;
+  }
+
+  if (!creatorsCache.length) {
+    creatorsList.innerHTML = "<p class='muted'>No creators yet. Save Shelby Knight above to unlock products.</p>";
+    return;
+  }
+
+  creatorsList.innerHTML = creatorsCache
+    .map(
+      (creator) => `
+        <article class="admin-product">
+          <img src="${creator.imageUrl || "https://via.placeholder.com/300x200?text=Creator"}" alt="${creator.name}">
+          <div>
+            <h4>${creator.name}</h4>
+            <p>${creator.bio || ""}</p>
+            <button type="button" class="button secondary edit-creator-btn" data-id="${creator.id}">Edit</button>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function fillCreatorForm(creator) {
+  creatorForm.elements.creatorId.value = creator.id;
+  creatorForm.elements.name.value = creator.name || "";
+  creatorForm.elements.bio.value = creator.bio || "";
+  creatorImageUrl.value = creator.imageUrl || "";
+  creatorForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function clearCreatorForm() {
+  creatorForm.reset();
+  creatorForm.elements.creatorId.value = "";
+}
+
+async function saveCreator(event) {
+  event.preventDefault();
+  const originalLabel = creatorSaveBtn.textContent;
+  creatorSaveBtn.disabled = true;
+  creatorSaveBtn.textContent = "Saving Creator...";
+  setMessage(creatorMessage, "Saving creator...");
+
+  const creatorId = creatorForm.elements.creatorId.value.trim();
+  const name = creatorForm.elements.name.value.trim();
+  const bio = creatorForm.elements.bio.value.trim();
+  const file = creatorImageFile.files[0];
+
+  if (!name) {
+    setMessage(creatorMessage, "Creator name is required.", true);
+    creatorSaveBtn.disabled = false;
+    creatorSaveBtn.textContent = originalLabel;
+    return;
+  }
+
+  try {
+    const creatorsCol = collection(db, "creators");
+    const isUpdate = Boolean(creatorId);
+    const targetDoc = isUpdate ? doc(db, "creators", creatorId) : doc(creatorsCol);
+    let imageUrl = creatorImageUrl.value.trim();
+
+    if (file) {
+      imageUrl = await uploadCreatorImage(targetDoc.id, file);
+    }
+
+    const payload = {
+      name,
+      bio,
+      imageUrl,
+      updatedAt: serverTimestamp()
+    };
+
+    if (!isUpdate) {
+      payload.createdAt = serverTimestamp();
+    }
+
+    await setDoc(targetDoc, payload, { merge: isUpdate });
+    setMessage(creatorMessage, isUpdate ? "Creator updated." : "Creator saved.");
+    clearCreatorForm();
+  } catch (error) {
+    console.error("saveCreator failed", error);
+    const code = error?.code || "";
+    if (code === "permission-denied") {
+      setMessage(
+        creatorMessage,
+        "Permission denied. Publish Firestore rules for creators + siteConfig (see firestore.rules).",
+        true
+      );
+    } else {
+      setMessage(creatorMessage, error.message || "Could not save creator.", true);
+    }
+  } finally {
+    creatorSaveBtn.disabled = false;
+    creatorSaveBtn.textContent = originalLabel;
   }
 }
 
@@ -131,6 +266,7 @@ function fillProductForm(product) {
   productForm.elements.name.value = product.name || "";
   productForm.elements.price.value = product.price || "";
   productForm.elements.categoryId.value = product.category || "";
+  productForm.elements.creatorId.value = product.creatorId || "";
   productForm.elements.description.value = product.description || "";
   imageUrlInput.value = product.imageUrl || "";
   productForm.elements.featured.checked = Boolean(product.featured);
@@ -150,12 +286,18 @@ async function saveProduct(event) {
   const name = productForm.elements.name.value.trim();
   const price = Number(productForm.elements.price.value);
   const category = productForm.elements.categoryId.value;
+  const creatorId = productForm.elements.creatorId.value;
   const description = productForm.elements.description.value.trim();
   const featured = productForm.elements.featured.checked;
   const file = imageFileInput.files[0];
 
   if (!name || !category || Number.isNaN(price)) {
     setMessage(productMessage, "Name, price, and category are required.", true);
+    return;
+  }
+
+  if (!creatorId) {
+    setMessage(productMessage, "Choose a Seller / Creator first (save one above).", true);
     return;
   }
 
@@ -173,6 +315,7 @@ async function saveProduct(event) {
       name,
       price,
       category,
+      creatorId,
       description,
       imageUrl,
       featured: Boolean(featured)
@@ -241,6 +384,18 @@ async function loadPromoForForm() {
 }
 
 function bindAdminEvents() {
+  creatorForm.addEventListener("submit", saveCreator);
+  creatorsList.addEventListener("click", (event) => {
+    const editBtn = event.target.closest(".edit-creator-btn");
+    if (!editBtn) {
+      return;
+    }
+    const target = creatorsCache.find((item) => item.id === editBtn.dataset.id);
+    if (target) {
+      fillCreatorForm(target);
+    }
+  });
+
   productForm.addEventListener("submit", saveProduct);
   promoForm.addEventListener("submit", savePromo);
   signOutButton.addEventListener("click", () => signOut(auth));
@@ -320,7 +475,27 @@ if (!isFirebaseReady) {
     authPanel.classList.add("hidden");
     adminPanel.classList.remove("hidden");
 
-    // Real-time products listener
+    onSnapshot(
+      collection(db, "creators"),
+      (snapshot) => {
+        creatorsCache = snapshot.docs
+          .map((snap) => ({
+            id: snap.id,
+            ...snap.data()
+          }))
+          .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        renderCreators();
+      },
+      (error) => {
+        console.error("creators onSnapshot failed", error);
+        setMessage(
+          creatorMessage,
+          "Could not load creators. Add Firestore index or check rules for creators collection.",
+          true
+        );
+      }
+    );
+
     const productsQuery = query(collection(db, "products"), orderBy("createdAt", "desc"));
     onSnapshot(
       productsQuery,
