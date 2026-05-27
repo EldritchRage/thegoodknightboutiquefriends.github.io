@@ -64,9 +64,8 @@
         <form id="creator-form" class="checkout-form">
           <input type="hidden" name="creatorId" value="">
           <input type="text" name="name" placeholder="Creator Name (e.g. Shelby Knight)" required>
-          <textarea name="bio" rows="3" placeholder="Short bio / shop description"></textarea>
+          <input type="email" name="paypalEmail" placeholder="PayPal email" required>
           <input id="creator-image-url" type="url" name="imageUrl" placeholder="Profile image URL (optional)">
-          <input id="creator-image-file" type="file" accept="image/*">
           <button type="submit" class="button" id="creator-save-btn">Save Creator</button>
         </form>
         <p id="creator-message" class="muted"></p>
@@ -86,11 +85,10 @@
             <option value="">Choose Category</option>
           </select>
           <textarea name="description" placeholder="Product Description" rows="4"></textarea>
-          <input id="product-image-url" type="url" name="imageUrl" placeholder="Image URL (optional)">
-          <input id="product-image-file" type="file" accept="image/*">
+          <input id="product-image-url" type="url" name="imageUrl" placeholder="Product image URL (paste link to image)">
           <label class="muted"><input type="checkbox" name="featured"> Mark as featured</label>
           <div class="product-actions">
-            <button type="submit" class="button">Save Product</button>
+            <button type="submit" class="button" id="product-save-btn">Save Product</button>
             <button id="clear-product-form" type="button" class="button secondary">Clear Form</button>
           </div>
         </form>
