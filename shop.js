@@ -419,9 +419,7 @@ function bindEvents() {
         }
         orderRecord.transactionId = chargeResult.transactionId || "";
         orderRecord.status = "paid";
-      }
-
-      if (isFirebaseReady) {
+      } else if (isFirebaseReady) {
         await addDoc(collection(db, "orders"), orderRecord);
       }
 
