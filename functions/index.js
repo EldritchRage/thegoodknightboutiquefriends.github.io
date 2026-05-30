@@ -1,7 +1,7 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const braintree = require("braintree");
-const cors = require("cors")({ origin: true });
+
 
 admin.initializeApp();
 
@@ -11,7 +11,13 @@ function getGateway() {
   const publicKey = cfg.public_key || process.env.BRAINTREE_PUBLIC_KEY;
   const privateKey = cfg.private_key || process.env.BRAINTREE_PRIVATE_KEY;
   const environmentName = (cfg.environment || process.env.BRAINTREE_ENVIRONMENT || "sandbox").toLowerCase();
+const cors = require("cors");
 
+const corsHandler = cors({
+  origin: ["https://eldritchrage.github.io"],
+  methods: ["GET", "POST", "OPTIONS"],
+  credentials: true
+});
   if (!merchantId || !publicKey || !privateKey) {
     throw new Error(
       "Braintree credentials missing. Run: firebase functions:config:set braintree.merchant_id=\"...\" braintree.public_key=\"...\" braintree.private_key=\"...\" braintree.environment=\"sandbox\""
@@ -32,7 +38,7 @@ function getGateway() {
 }
 
 function runCors(req, res, handler) {
-  return cors(req, res, async () => {
+return corsHandler(req, res, async () => {
     if (req.method === "OPTIONS") {
       res.status(204).send("");
       return;
