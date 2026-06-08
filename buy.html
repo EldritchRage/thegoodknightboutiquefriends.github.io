@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout - The Good Knight Boutique Friends</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">The Good Knight Boutique + Friends</div>
+      <nav class="site-nav">
+        <a href="index.html">Home</a>
+        <a href="creators.html">Creators</a>
+        <a href="shop.html">Shop</a>
+        <a href="join.html">Join</a>
+        <a href="login.html">Login</a>
+        <a href="admin.html">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <h1>Secure Checkout</h1>
+      <p class="muted">Signed in as <span id="user-email"></span></p>
+      <button id="sign-out-btn" class="button secondary">Sign Out</button>
+    </section>
+
+    <section class="panel">
+      <h3>Your Cart</h3>
+      <ul id="buy-cart-list" class="cart-list"></ul>
+      <p><strong>Subtotal:</strong> <span id="buy-subtotal">$0.00</span></p>
+      <p id="buy-message" class="muted"></p>
+    </section>
+
+    <section class="panel" style="margin-top:1rem;">
+      <h3>Pay with Stripe</h3>
+      <p class="muted">Checkout opens on Stripe's secure hosted page in a new tab.</p>
+      <div id="payment-links" class="admin-products"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">© The Good Knight Boutique Friends</footer>
+  <script type="module" src="buy.js"></script>
+</body>
+</html>

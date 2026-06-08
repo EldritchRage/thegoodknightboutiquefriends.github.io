@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - The Good Knight Boutique Friends</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">The Good Knight Boutique + Friends</div>
+      <nav class="site-nav">
+        <a href="index.html">Home</a>
+        <a href="creators.html">Creators</a>
+        <a href="shop.html">Shop</a>
+        <a href="join.html">Join</a>
+        <a href="login.html" class="active">Login</a>
+        <a href="admin.html">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <h1>Customer Login</h1>
+      <p class="muted">Sign in to access secure checkout with Stripe Payment Links.</p>
+    </section>
+
+    <section class="panel admin-two-col">
+      <form id="login-form" class="checkout-form">
+        <h3>Sign In</h3>
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit" class="button">Sign In</button>
+      </form>
+
+      <form id="register-form" class="checkout-form">
+        <h3>Create Account</h3>
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Password (6+ chars)" minlength="6" required>
+        <button type="submit" class="button secondary">Create Account</button>
+      </form>
+    </section>
+
+    <p id="auth-message" class="muted"></p>
+  </main>
+
+  <footer class="site-footer">© The Good Knight Boutique Friends</footer>
+  <script type="module" src="login.js"></script>
+</body>
+</html>

@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shop - The Good Knight Boutique Friends</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="https://js.braintreegateway.com/web/dropin/1.46.1/js/dropin.min.js"></script>
 </head>
 <body>
   <header class="site-header">
@@ -16,6 +15,7 @@
         <a href="creators.html">Creators</a>
         <a href="shop.html" class="active">Shop</a>
         <a href="join.html">Join</a>
+        <a href="login.html">Login</a>
         <a href="admin.html">Admin</a>
       </nav>
     </div>
@@ -100,31 +100,8 @@
       <h3>Check Cart</h3>
       <ul id="cart-list" class="cart-list"></ul>
       <p><strong>Subtotal before shipping:</strong> <span id="subtotal">$0.00</span></p>
+      <p class="muted">Sign in required. Checkout uses Stripe Payment Links (secure hosted page).</p>
       <button id="checkout-toggle" class="button" disabled>Proceed to Checkout</button>
-    </section>
-
-    <section id="checkout-section" class="panel hidden" style="margin-top: 1rem;">
-      <h3>Checkout</h3>
-      <form id="checkout-form" class="checkout-form">
-        <input type="text" name="fullName" placeholder="Full Name" required>
-        <input type="text" name="address" placeholder="Shipping Address" required>
-        <select name="shippingMethod" required>
-          <option value="">Shipping Method</option>
-          <option value="standard">Standard Shipping ($5.00)</option>
-          <option value="expedited">Expedited Shipping ($12.00)</option>
-          <option value="overnight">Overnight Shipping ($25.00)</option>
-        </select>
-        <p class="muted">Payment (PayPal / card via Braintree)</p>
-        <div id="dropin-container"></div>
-        <p id="payment-message" class="muted"></p>
-        <p><strong>Order total:</strong> <span id="order-total">$0.00</span></p>
-        <button type="submit" class="button" id="make-purchase-btn">Make Purchase</button>
-      </form>
-    </section>
-
-    <section id="thank-you" class="hero hidden">
-      <h2>Thank you for your purchase!</h2>
-      <p class="muted">Your order has been received. Shelby Knight will prepare your items soon.</p>
     </section>
   </main>
 

@@ -1,20 +1,7 @@
 import { db, isFirebaseReady } from "./firebase-client.js";
-import { braintreeConfig } from "./braintree-config.js";
-import {
-  addDoc,
-  collection,
-  getDocs,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-
-const SHIPPING_RATES = {
-  standard: 5,
-  expedited: 12,
-  overnight: 25
-};
-
-let dropinInstance = null;
-let dropinReady = false;
+import { watchAuth } from "./auth-service.js";
+import { saveCart } from "./cart-storage.js";
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const categoryLabels = {
   "crocheted-outfits": "Crocheted Outfits",
@@ -61,112 +48,10 @@ const fallbackCatalog = {
 let activeCategory = "crocheted-outfits";
 const cart = {};
 const catalog = {};
+let currentUser = null;
 
 function money(amount) {
   return `$${Number(amount).toFixed(2)}`;
-}
-
-function getCartSubtotal() {
-  return Object.entries(cart).reduce((sum, [productId, qty]) => {
-    const product = getProductById(productId);
-    if (!product) {
-      return sum;
-    }
-    return sum + Number(product.price) * qty;
-  }, 0);
-}
-
-function getShippingCost(method) {
-  return SHIPPING_RATES[method] || 0;
-}
-
-function getOrderTotal(shippingMethod) {
-  return getCartSubtotal() + getShippingCost(shippingMethod);
-}
-
-function setPaymentMessage(text, isError = false) {
-  const el = document.getElementById("payment-message");
-  if (!el) {
-    return;
-  }
-  el.textContent = text;
-  el.style.color = isError ? "#fca5a5" : "#9ba7bf";
-}
-
-function updateOrderTotalDisplay() {
-  const checkoutForm = document.getElementById("checkout-form");
-  const orderTotalEl = document.getElementById("order-total");
-  if (!checkoutForm || !orderTotalEl) {
-    return;
-  }
-  const shippingMethod = checkoutForm.elements.shippingMethod.value;
-  orderTotalEl.textContent = money(getOrderTotal(shippingMethod));
-}
-
-async function fetchBraintreeClientToken() {
-  const url = braintreeConfig.clientTokenUrl?.trim();
-  if (!url) {
-    throw new Error("Set braintreeConfig.clientTokenUrl in braintree-config.js");
-  }
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Client token request failed (${response.status})`);
-  }
-  const data = await response.json();
-  if (!data.clientToken) {
-    throw new Error("Server response missing clientToken");
-  }
-  return data.clientToken;
-}
-
-function teardownDropin() {
-  if (dropinInstance) {
-    dropinInstance.teardown(() => {
-      dropinInstance = null;
-      dropinReady = false;
-    });
-    return;
-  }
-  dropinReady = false;
-}
-
-async function initBraintreeDropin() {
-  if (typeof braintree === "undefined") {
-    throw new Error("Braintree Drop-in script did not load");
-  }
-
-  const checkoutForm = document.getElementById("checkout-form");
-  const shippingMethod = checkoutForm?.elements.shippingMethod?.value || "standard";
-  const amount = getOrderTotal(shippingMethod).toFixed(2);
-
-  teardownDropin();
-
-  const clientToken = await fetchBraintreeClientToken();
-
-  return new Promise((resolve, reject) => {
-    braintree.dropin.create(
-      {
-        authorization: clientToken,
-        container: document.getElementById("dropin-container"),
-        paypal: {
-          flow: "checkout",
-          amount,
-          currency: "USD"
-        }
-      },
-      (error, instance) => {
-        if (error) {
-          console.error("braintree.dropin.create failed", error);
-          reject(error);
-          return;
-        }
-        dropinInstance = instance;
-        dropinReady = true;
-        setPaymentMessage("Choose PayPal or enter card details below.");
-        resolve(instance);
-      }
-    );
-  });
 }
 
 function allProducts() {
@@ -263,7 +148,18 @@ function renderCart() {
 
   subtotalEl.textContent = money(subtotal);
   checkoutButton.disabled = false;
-  updateOrderTotalDisplay();
+}
+
+function goToCheckout() {
+  if (!Object.keys(cart).length) {
+    return;
+  }
+  saveCart(cart);
+  if (currentUser) {
+    window.location.href = "buy.html";
+    return;
+  }
+  window.location.href = "login.html?next=buy.html";
 }
 
 function bindEvents() {
@@ -309,136 +205,7 @@ function bindEvents() {
     }
   });
 
-  const checkoutToggle = document.getElementById("checkout-toggle");
-  const checkoutSection = document.getElementById("checkout-section");
-  const checkoutForm = document.getElementById("checkout-form");
-  const thankYouMessage = document.getElementById("thank-you");
-  const makePurchaseBtn = document.getElementById("make-purchase-btn");
-
-  checkoutToggle.addEventListener("click", async () => {
-    const opening = checkoutSection.classList.contains("hidden");
-    checkoutSection.classList.toggle("hidden");
-    if (!opening) {
-      teardownDropin();
-      return;
-    }
-    checkoutSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    updateOrderTotalDisplay();
-    setPaymentMessage("Loading payment options...");
-    try {
-      await initBraintreeDropin();
-    } catch (error) {
-      console.error("initBraintreeDropin failed", error);
-      setPaymentMessage(error.message, true);
-    }
-  });
-
-  checkoutForm.elements.shippingMethod.addEventListener("change", async () => {
-    updateOrderTotalDisplay();
-    if (!checkoutSection.classList.contains("hidden")) {
-      try {
-        await initBraintreeDropin();
-      } catch (error) {
-        console.error("reinit dropin after shipping change failed", error);
-        setPaymentMessage(error.message, true);
-      }
-    }
-  });
-
-  checkoutForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    if (!Object.keys(cart).length) {
-      return;
-    }
-    if (!dropinInstance || !dropinReady) {
-      setPaymentMessage("Payment form is not ready yet. Wait a moment and try again.", true);
-      return;
-    }
-
-    const originalLabel = makePurchaseBtn.textContent;
-    makePurchaseBtn.disabled = true;
-    makePurchaseBtn.textContent = "Processing...";
-    setPaymentMessage("Processing payment...");
-
-    const fullName = checkoutForm.elements.fullName.value.trim();
-    const address = checkoutForm.elements.address.value.trim();
-    const shippingMethod = checkoutForm.elements.shippingMethod.value;
-    const subtotal = getCartSubtotal();
-    const shippingCost = getShippingCost(shippingMethod);
-    const total = getOrderTotal(shippingMethod);
-
-    try {
-      const payload = await new Promise((resolve, reject) => {
-        dropinInstance.requestPaymentMethod((error, payload) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-          resolve(payload);
-        });
-      });
-
-      const orderRecord = {
-        fullName,
-        address,
-        shippingMethod,
-        subtotal,
-        shippingCost,
-        total,
-        paymentNonce: payload.nonce,
-        paymentType: payload.type,
-        items: Object.entries(cart).map(([productId, qty]) => {
-          const product = getProductById(productId);
-          return {
-            productId,
-            name: product?.name || "Unknown",
-            price: product?.price || 0,
-            qty
-          };
-        }),
-        status: braintreeConfig.checkoutUrl ? "pending_capture" : "paid_demo",
-        createdAt: serverTimestamp()
-      };
-
-      if (braintreeConfig.checkoutUrl) {
-        const chargeResponse = await fetch(braintreeConfig.checkoutUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            paymentMethodNonce: payload.nonce,
-            amount: total.toFixed(2),
-            order: orderRecord
-          })
-        });
-        if (!chargeResponse.ok) {
-          throw new Error(`Checkout server failed (${chargeResponse.status})`);
-        }
-        const chargeResult = await chargeResponse.json();
-        if (!chargeResult.success) {
-          throw new Error(chargeResult.message || "Payment was not approved");
-        }
-        orderRecord.transactionId = chargeResult.transactionId || "";
-        orderRecord.status = "paid";
-      } else if (isFirebaseReady) {
-        await addDoc(collection(db, "orders"), orderRecord);
-      }
-
-      Object.keys(cart).forEach((key) => delete cart[key]);
-      renderCart();
-      teardownDropin();
-      checkoutSection.classList.add("hidden");
-      checkoutForm.reset();
-      thankYouMessage.classList.remove("hidden");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      setPaymentMessage("");
-    } catch (error) {
-      console.error("checkout failed", error);
-      setPaymentMessage(error.message || "Payment failed. Please try again.", true);
-    } finally {
-      makePurchaseBtn.disabled = false;
-      makePurchaseBtn.textContent = originalLabel;
-    }
-  });
+  document.getElementById("checkout-toggle").addEventListener("click", goToCheckout);
 }
 
 async function loadProducts() {
@@ -466,6 +233,10 @@ async function loadProducts() {
 }
 
 async function init() {
+  watchAuth((user) => {
+    currentUser = user;
+  });
+
   await loadProducts();
   if (!catalog[activeCategory]) {
     const firstCategoryWithData = Object.keys(catalog)[0];
