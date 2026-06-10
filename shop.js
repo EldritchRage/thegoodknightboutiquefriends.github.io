@@ -11,6 +11,14 @@ const cart = {};
 const catalog = {};
 let currentUser = null;
 
+const categoryAliases = {
+  "rave-wear": "ravewear"
+};
+
+function normalizeCategory(category) {
+  return categoryAliases[category] || category;
+}
+
 function money(amount) {
   return `$${Number(amount).toFixed(2)}`;
 }
@@ -180,13 +188,14 @@ async function loadProducts() {
     const snap = await getDocs(collection(db, "products"));
     snap.forEach((docSnap) => {
       const product = { id: docSnap.id, ...docSnap.data() };
-      if (!product.category) {
+      const category = normalizeCategory(product.category);
+      if (!category) {
         return;
       }
-      if (!catalog[product.category]) {
-        catalog[product.category] = [];
+      if (!catalog[category]) {
+        catalog[category] = [];
       }
-      catalog[product.category].push(product);
+      catalog[category].push(product);
     });
   } catch (error) {
     console.error("loadProducts failed", error);
