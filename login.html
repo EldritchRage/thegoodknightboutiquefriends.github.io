@@ -17,6 +17,7 @@
         <a href="join.html">Join</a>
         <a href="login.html" class="active">Login</a>
         <a href="admin.html">Admin</a>
+        <a href="cart.html" class="cart-link">Cart <span id="cart-count" class="cart-badge hidden">0</span></a>
       </nav>
     </div>
   </header>
@@ -24,7 +25,7 @@
   <main class="page">
     <section class="hero">
       <h1>Customer Login</h1>
-      <p class="muted">Sign in to access secure checkout with Stripe Payment Links.</p>
+      <p class="muted">Sign in to save your account for future orders. Checkout uses Stripe Checkout Sessions.</p>
     </section>
 
     <section class="panel admin-two-col">
@@ -47,6 +48,7 @@
   </main>
 
   <footer class="site-footer">© The Good Knight Boutique Friends</footer>
+  <script type="module" src="nav-cart.js"></script>
   <script type="module" src="login.js"></script>
 </body>
 </html>

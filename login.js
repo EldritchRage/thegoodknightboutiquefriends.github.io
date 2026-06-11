@@ -16,7 +16,7 @@ function setMessage(text, isError = false) {
 }
 
 function redirectAfterLogin() {
-  window.location.href = getLoginRedirectUrl("buy.html");
+  window.location.href = getLoginRedirectUrl("cart.html");
 }
 
 if (!isAuthConfigured()) {

@@ -17,6 +17,7 @@
         <a href="join.html">Join</a>
         <a href="login.html">Login</a>
         <a href="admin.html">Admin</a>
+        <a href="cart.html" class="cart-link">Cart <span id="cart-count" class="cart-badge hidden">0</span></a>
       </nav>
     </div>
   </header>
@@ -25,7 +26,7 @@
     <section class="hero">
       <h1>Shelby Knight Shop</h1>
       <p class="muted">Choose a category to open a specific catalog. Click item details to expand each description.</p>
-      <p class="muted">Shelby can manage products, images, and prices from <code>admin.html</code>.</p>
+      <p class="muted">Shelby can manage products, images, and Stripe Price IDs from <code>admin.html</code>.</p>
     </section>
 
     <section class="shop-layout">
@@ -65,15 +66,15 @@
     </section>
 
     <section class="panel" style="margin-top: 1rem;">
-      <h3>Check Cart</h3>
-      <ul id="cart-list" class="cart-list"></ul>
-      <p><strong>Subtotal before shipping:</strong> <span id="subtotal">$0.00</span></p>
-      <p class="muted">Sign in required. Checkout uses Stripe Payment Links (secure hosted page).</p>
-      <button id="checkout-toggle" class="button" disabled>Proceed to Checkout</button>
+      <h3>Your Cart</h3>
+      <p id="cart-preview" class="muted">Your cart is empty.</p>
+      <a id="view-cart-link" href="cart.html" class="button hidden">View Cart &amp; Checkout</a>
+      <p class="muted">Checkout uses Stripe Checkout Sessions. Totals are calculated securely on Stripe's servers.</p>
     </section>
   </main>
 
   <footer class="site-footer">© The Good Knight Boutique Friends</footer>
+  <script type="module" src="nav-cart.js"></script>
   <script type="module" src="shop.js"></script>
 </body>
 </html>

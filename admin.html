@@ -16,6 +16,7 @@
         <a href="shop.html">Shop</a>
         <a href="join.html">Join</a>
         <a href="admin.html" class="active">Admin</a>
+        <a href="cart.html" class="cart-link">Cart <span id="cart-count" class="cart-badge hidden">0</span></a>
       </nav>
     </div>
   </header>
@@ -74,13 +75,15 @@
 
       <section class="panel" style="margin-top:1rem;">
         <h3>Product Manager</h3>
+        <p class="muted">Add a Stripe Price ID (<code>price_...</code>) so each product can be added to cart and checked out.</p>
         <form id="product-form" class="checkout-form">
           <input type="hidden" name="productId" value="">
           <select id="product-creator" name="creatorId" required>
             <option value="">Seller / Creator</option>
           </select>
           <input type="text" name="name" placeholder="Product Name" required>
-          <input type="number" name="price" placeholder="Price (e.g. 24.99)" min="0" step="0.01" required>
+          <input type="number" name="price" placeholder="Display price (e.g. 24.99)" min="0" step="0.01" required>
+          <input type="text" name="stripePriceId" placeholder="Stripe Price ID (price_...)" pattern="price_.+">
           <select id="product-category" name="categoryId" required>
             <option value="">Choose Category</option>
           </select>
@@ -115,6 +118,7 @@
   </main>
 
   <footer class="site-footer">© The Good Knight Boutique Friends</footer>
+  <script type="module" src="nav-cart.js"></script>
   <script type="module" src="admin.js"></script>
 </body>
 </html>

@@ -18,7 +18,7 @@ export function watchAuth(callback) {
   return onAuthStateChanged(auth, callback);
 }
 
-export function requireAuth(loginPath = "login.html", returnPath = "buy.html") {
+export function requireAuth(loginPath = "login.html", returnPath = "cart.html") {
   return new Promise((resolve) => {
     if (!isAuthConfigured()) {
       console.error("Firebase Auth is not configured");
@@ -28,7 +28,7 @@ export function requireAuth(loginPath = "login.html", returnPath = "buy.html") {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       unsubscribe();
       if (!user) {
-        const next = encodeURIComponent(returnPath || "buy.html");
+        const next = encodeURIComponent(returnPath || "cart.html");
         window.location.href = `${loginPath}?next=${next}`;
         return;
       }
@@ -58,7 +58,7 @@ export async function logOut() {
   await signOut(auth);
 }
 
-export function getLoginRedirectUrl(defaultPath = "buy.html") {
+export function getLoginRedirectUrl(defaultPath = "cart.html") {
   const params = new URLSearchParams(window.location.search);
   const next = params.get("next");
   if (!next || next.includes("://") || next.startsWith("//")) {

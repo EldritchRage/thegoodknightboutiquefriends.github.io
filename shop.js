@@ -1,16 +1,13 @@
 import { db, isFirebaseReady } from "./firebase-client.js";
-import { watchAuth } from "./auth-service.js";
-import { saveCart } from "./cart-storage.js";
+import { addToCart, getCartCount, onCartUpdated } from "./cart.js";
+import { resolveStripePriceId } from "./sampleProducts.js";
 import { categoryLabels, defaultCategory } from "./categories.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const fallbackCatalog = {};
 
 let activeCategory = defaultCategory;
-const cart = {};
 const catalog = {};
-let currentUser = null;
-
 const categoryAliases = {
   "rave-wear": "ravewear"
 };
@@ -25,10 +22,6 @@ function money(amount) {
 
 function allProducts() {
   return Object.values(catalog).flat();
-}
-
-function getProductById(productId) {
-  return allProducts().find((item) => item.id === productId) || null;
 }
 
 function renderCatalog(categoryId) {
@@ -52,8 +45,14 @@ function renderCatalog(categoryId) {
   }
 
   catalogGrid.innerHTML = products
-    .map(
-      (product) => `
+    .map((product) => {
+      const priceId = resolveStripePriceId(product);
+      const canAdd = Boolean(priceId);
+      const addLabel = canAdd ? "Add To Cart" : "Stripe Price ID Needed";
+      const addClass = canAdd ? "add-btn" : "add-btn disabled-btn";
+      const addDisabled = canAdd ? "" : "disabled";
+
+      return `
         <article class="product-card">
           <div class="product-image-wrap">
             <img src="${product.imageUrl || "https://via.placeholder.com/600x400?text=No+Image"}" alt="${product.name}">
@@ -63,73 +62,39 @@ function renderCatalog(categoryId) {
             <h4>${product.name}</h4>
             <div class="product-actions">
               <button class="button secondary details-btn" data-id="${product.id}">Item Details</button>
-              <button class="button add-btn" data-id="${product.id}">Add To Cart</button>
+              <button
+                class="button ${addClass}"
+                data-id="${product.id}"
+                data-price-id="${priceId || ""}"
+                ${addDisabled}
+              >${addLabel}</button>
             </div>
             <div class="product-description hidden" id="desc-${product.id}">
               ${product.description || "No description yet."}
             </div>
           </div>
         </article>
-      `
-    )
-    .join("");
-}
-
-function renderCart() {
-  const cartList = document.getElementById("cart-list");
-  const subtotalEl = document.getElementById("subtotal");
-  const checkoutButton = document.getElementById("checkout-toggle");
-  const entries = Object.entries(cart);
-
-  if (!entries.length) {
-    cartList.innerHTML = "<li class='muted'>Cart is empty.</li>";
-    subtotalEl.textContent = money(0);
-    checkoutButton.disabled = true;
-    return;
-  }
-
-  let subtotal = 0;
-  cartList.innerHTML = entries
-    .map(([productId, qty]) => {
-      const product = getProductById(productId);
-      if (!product) {
-        return "";
-      }
-      const line = Number(product.price) * qty;
-      subtotal += line;
-      return `
-        <li class="cart-item">
-          <div>
-            <strong>${product.name}</strong><br>
-            <span class="muted">${money(product.price)} each</span>
-          </div>
-          <div>
-            <div class="qty-controls">
-              <button class="qty-btn" data-id="${product.id}" data-action="dec">-</button>
-              <span>${qty}</span>
-              <button class="qty-btn" data-id="${product.id}" data-action="inc">+</button>
-            </div>
-            <div style="text-align:right; margin-top:4px;">${money(line)}</div>
-          </div>
-        </li>
       `;
     })
     .join("");
-
-  subtotalEl.textContent = money(subtotal);
-  checkoutButton.disabled = false;
 }
 
-function goToCheckout() {
-  if (!Object.keys(cart).length) {
+function renderCartPreview() {
+  const previewEl = document.getElementById("cart-preview");
+  const checkoutLink = document.getElementById("view-cart-link");
+  if (!previewEl) {
     return;
   }
-  saveCart(cart);
-  if (currentUser) {
-    window.location.href = "buy.html";
-    return;
+
+  const count = getCartCount();
+  previewEl.textContent =
+    count === 0
+      ? "Your cart is empty."
+      : `${count} ${count === 1 ? "item" : "items"} in your cart.`;
+
+  if (checkoutLink) {
+    checkoutLink.classList.toggle("hidden", count === 0);
   }
-  window.location.href = "login.html?next=buy.html";
 }
 
 function bindEvents() {
@@ -149,33 +114,29 @@ function bindEvents() {
     }
 
     const addButton = event.target.closest(".add-btn");
-    if (addButton) {
+    if (addButton && !addButton.disabled) {
       const productId = addButton.dataset.id;
-      cart[productId] = (cart[productId] || 0) + 1;
-      renderCart();
-      return;
-    }
-
-    const qtyButton = event.target.closest(".qty-btn");
-    if (qtyButton) {
-      const productId = qtyButton.dataset.id;
-      const action = qtyButton.dataset.action;
-      if (!cart[productId]) {
+      const product = allProducts().find((item) => item.id === productId);
+      const priceId = addButton.dataset.priceId || resolveStripePriceId(product);
+      if (!product || !priceId) {
         return;
       }
-      if (action === "inc") {
-        cart[productId] += 1;
-      } else {
-        cart[productId] -= 1;
-      }
-      if (cart[productId] <= 0) {
-        delete cart[productId];
-      }
-      renderCart();
+
+      addToCart({
+        priceId,
+        name: product.name,
+        image: product.imageUrl || "",
+        displayPrice: money(product.price)
+      });
+
+      addButton.textContent = "Added";
+      setTimeout(() => {
+        addButton.textContent = "Add To Cart";
+      }, 1200);
+
+      renderCartPreview();
     }
   });
-
-  document.getElementById("checkout-toggle").addEventListener("click", goToCheckout);
 }
 
 async function loadProducts() {
@@ -204,10 +165,6 @@ async function loadProducts() {
 }
 
 async function init() {
-  watchAuth((user) => {
-    currentUser = user;
-  });
-
   await loadProducts();
   if (!catalog[activeCategory]) {
     const firstCategoryWithData = Object.keys(catalog)[0];
@@ -216,7 +173,8 @@ async function init() {
     }
   }
   renderCatalog(activeCategory);
-  renderCart();
+  renderCartPreview();
+  onCartUpdated(renderCartPreview);
   bindEvents();
 }
 

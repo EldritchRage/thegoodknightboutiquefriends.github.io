@@ -183,6 +183,7 @@ function renderProducts() {
             <p class="muted">${categoryLabels[product.category] || product.category}</p>
             <p>${product.description || ""}</p>
             <p><strong>$${Number(product.price).toFixed(2)}</strong></p>
+            <p class="muted">${product.stripePriceId || "No Stripe Price ID"}</p>
             <div class="product-actions">
               <button class="button secondary edit-btn" data-id="${product.id}">Edit</button>
               <button class="button danger delete-btn" data-id="${product.id}">Delete</button>
@@ -201,6 +202,7 @@ function fillProductForm(product) {
   productForm.elements.categoryId.value = product.category || "";
   productForm.elements.creatorId.value = product.creatorId || "";
   productForm.elements.description.value = product.description || "";
+  productForm.elements.stripePriceId.value = product.stripePriceId || "";
   imageUrlInput.value = product.imageUrl || "";
   productForm.elements.featured.checked = Boolean(product.featured);
   productForm.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -227,6 +229,7 @@ async function saveProduct(event) {
   const category = productForm.elements.categoryId.value;
   const creatorId = productForm.elements.creatorId.value;
   const description = productForm.elements.description.value.trim();
+  const stripePriceId = productForm.elements.stripePriceId.value.trim();
   const featured = productForm.elements.featured.checked;
   const imageUrl = imageUrlInput.value.trim();
 
@@ -256,6 +259,7 @@ async function saveProduct(event) {
       creatorId,
       description,
       imageUrl,
+      stripePriceId,
       featured: Boolean(featured)
     };
 
