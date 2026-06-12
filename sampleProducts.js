@@ -1,9 +1,12 @@
-// Map Firestore product document IDs to Stripe Price IDs.
-// In admin, you can also set stripePriceId on each product directly.
-// Replace placeholders with real Price IDs from Stripe Dashboard (Products → Price ID).
+// Map Firestore product document IDs to Stripe Price IDs (optional).
+// You can also set stripePriceId on each product in admin.html.
 export const productPriceIds = {
-  // "FIRESTORE_PRODUCT_DOC_ID": "price_REPLACE_WITH_REAL_ID"
+  // "FIRESTORE_PRODUCT_DOC_ID": "price_1Th1YKCCPel8RYA2GwjuqYzK"
 };
+
+// Used when a product has no stripePriceId in Firestore and no entry in productPriceIds.
+// Fine for one product / testing — add per-product IDs in admin when you have more items.
+export const defaultStripePriceId = "price_1Th1YKCCPel8RYA2GwjuqYzK";
 
 export function resolveStripePriceId(product) {
   if (!product) {
@@ -13,8 +16,11 @@ export function resolveStripePriceId(product) {
     return product.stripePriceId;
   }
   const mapped = productPriceIds[product.id];
-  if (mapped && mapped.startsWith("price_") && !mapped.includes("REPLACE")) {
+  if (mapped && mapped.startsWith("price_")) {
     return mapped;
+  }
+  if (defaultStripePriceId && defaultStripePriceId.startsWith("price_")) {
+    return defaultStripePriceId;
   }
   return null;
 }
