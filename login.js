@@ -8,6 +8,7 @@ import {
 
 const loginForm = document.getElementById("login-form");
 const registerForm = document.getElementById("register-form");
+const guestCheckoutForm = document.getElementById("guest-checkout-form");
 const authMessage = document.getElementById("auth-message");
 
 function setMessage(text, isError = false) {
@@ -17,6 +18,23 @@ function setMessage(text, isError = false) {
 
 function redirectAfterLogin() {
   window.location.href = getLoginRedirectUrl("cart.html");
+}
+
+function saveGuestCheckoutInfo(formData) {
+  const guestInfo = {
+    firstName: formData.get("firstName"),
+    lastName: formData.get("lastName"),
+    email: formData.get("email"),
+    phone: formData.get("phone"),
+    address: formData.get("address"),
+    apartment: formData.get("apartment"),
+    city: formData.get("city"),
+    state: formData.get("state"),
+    zip: formData.get("zip"),
+    country: formData.get("country"),
+    isGuest: true
+  };
+  localStorage.setItem("guestCheckoutInfo", JSON.stringify(guestInfo));
 }
 
 if (!isAuthConfigured()) {
@@ -57,6 +75,22 @@ if (!isAuthConfigured()) {
     } catch (error) {
       console.error("register failed", error);
       setMessage(error.message || "Could not create account.", true);
+    }
+  });
+
+  guestCheckoutForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    setMessage("Processing guest checkout...");
+    try {
+      const formData = new FormData(guestCheckoutForm);
+      saveGuestCheckoutInfo(formData);
+      setMessage("Proceeding to checkout...");
+      setTimeout(() => {
+        window.location.href = "cart.html";
+      }, 500);
+    } catch (error) {
+      console.error("guest checkout failed", error);
+      setMessage("Could not proceed to checkout.", true);
     }
   });
 }

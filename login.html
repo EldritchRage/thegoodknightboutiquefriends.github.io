@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - The Good Knight Boutique Friends</title>
+  <title>Login - P.S. It's A Vibe</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -41,10 +41,34 @@
       </form>
     </section>
 
+    <section class="panel checkout-form" style="margin-top: 2rem;">
+      <h3>Guest Checkout</h3>
+      <p class="muted">No account needed. Fill in your information and proceed to checkout.</p>
+      <form id="guest-checkout-form" class="checkout-form">
+        <div class="form-row">
+          <input type="text" name="firstName" placeholder="First Name" required>
+          <input type="text" name="lastName" placeholder="Last Name" required>
+        </div>
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="tel" name="phone" placeholder="Phone Number" required>
+        <div class="form-row">
+          <input type="text" name="address" placeholder="Street Address" required>
+          <input type="text" name="apartment" placeholder="Apt, suite, etc. (optional)">
+        </div>
+        <div class="form-row">
+          <input type="text" name="city" placeholder="City" required>
+          <input type="text" name="state" placeholder="State/Province" maxlength="2" required>
+          <input type="text" name="zip" placeholder="ZIP/Postal Code" required>
+        </div>
+        <input type="text" name="country" placeholder="Country" value="US" required>
+        <button type="submit" class="button">Continue to Checkout</button>
+      </form>
+    </section>
+
     <p id="auth-message" class="muted"></p>
   </main>
 
-  <footer class="site-footer">© The Good Knight Boutique Friends</footer>
+  <footer class="site-footer">© P.S. It's A Vibe</footer>
   <script type="module" src="nav-cart.js"></script>
   <script type="module" src="login.js"></script>
 </body>

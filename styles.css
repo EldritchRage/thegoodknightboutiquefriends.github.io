@@ -332,6 +332,16 @@ a:hover {
   gap: 0.85rem;
 }
 
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+.form-row input {
+  width: 100%;
+}
+
 .checkout-form input,
 .checkout-form select {
   width: 100%;
