@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Good Knight Boutique Friends</title>
+  <title>P.S. It's A Vibe - Curated Collections</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -20,28 +20,68 @@
   </header>
 
   <main class="page">
-    <section class="hero">
-      <h1>A collaborative space for artists and makers</h1>
-      <p class="muted">Discover unique art, crafts, prints, and digital creations.</p>
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-background" id="hero-background">
+        <img id="hero-image" src="https://via.placeholder.com/1400x600?text=P.S.+It%27s+A+Vibe" alt="Hero Banner" class="hero-image">
+      </div>
+      <div class="hero-content">
+        <h1 id="hero-headline">Discover Your Vibe</h1>
+        <p id="hero-subheading" class="muted">Shop unique collections and express yourself</p>
+        <a id="hero-button" href="shop.html" class="button button-primary">Shop Now</a>
+      </div>
     </section>
 
-    <section class="cards">
-      <article class="card">
-        <img src="https://via.placeholder.com/600x400?text=Shelby+Knight" alt="Shelby Knight creator profile placeholder">
-        <h3>Shelby Knight</h3>
-        <p class="muted">Wearables, drinkware and kitchen, and 3D printed creations.</p>
-        <a class="button" href="shop.html">Visit Shop</a>
-      </article>
+    <!-- Promo Banner Section -->
+    <section id="promo-section" class="promo-section hidden">
+      <div class="promo-carousel" id="promo-carousel">
+        <!-- Promos will be inserted here -->
+      </div>
+      <div class="promo-indicators" id="promo-indicators">
+        <!-- Indicators will be inserted here -->
+      </div>
     </section>
 
-    <section id="promo-section" class="hero hidden">
-      <h2 id="promo-title">Seasonal Spotlight</h2>
-      <p id="promo-text" class="muted"></p>
-      <a id="promo-button" class="button hidden" href="#">Shop Promo</a>
+    <!-- Featured Products Carousel -->
+    <section class="featured-section">
+      <div class="section-header">
+        <h2>Featured Products</h2>
+      </div>
+      <div class="carousel-container">
+        <div class="carousel" id="featured-carousel">
+          <!-- Products will be inserted here -->
+        </div>
+        <button class="carousel-nav prev" id="carousel-prev" aria-label="Previous">‹</button>
+        <button class="carousel-nav next" id="carousel-next" aria-label="Next">›</button>
+      </div>
+      <div class="section-action">
+        <a href="shop.html" class="button button-secondary">Browse All Products</a>
+      </div>
+    </section>
+
+    <!-- Categories Section -->
+    <section class="categories-section">
+      <div class="section-header">
+        <h2>Shop by Category</h2>
+      </div>
+      <div class="categories-grid" id="categories-grid">
+        <!-- Categories will be inserted here -->
+      </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="about-section">
+      <div class="about-content">
+        <h2>About P.S. It's A Vibe</h2>
+        <p id="about-text">P.S. It's A Vibe is your destination for curated, high-quality products that match your unique style and personality. From fashion to lifestyle, we bring together the best in contemporary design.</p>
+        <div id="about-image-wrap" class="about-image-wrap">
+          <img id="about-image" src="https://via.placeholder.com/500x400?text=About+P.S." alt="About P.S. It's A Vibe" class="about-image">
+        </div>
+      </div>
     </section>
   </main>
 
-  <footer class="site-footer">© The Good Knight Boutique Friends</footer>
+  <footer class="site-footer">© P.S. It's A Vibe</footer>
   <script type="module" src="nav-cart.js"></script>
   <script type="module" src="index.js"></script>
 </body>
