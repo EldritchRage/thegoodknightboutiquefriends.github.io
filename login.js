@@ -94,15 +94,35 @@ if (!isAuthConfigured()) {
       }
     });
 
-    // Also handle button click (button is type="button" now)
+    // Handle button click (button is type="button" now)
     const guestContinueBtn = document.getElementById("guest-continue-btn");
     if (guestContinueBtn) {
       guestContinueBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Validate required fields
+        const firstName = guestCheckoutForm.elements.firstName.value.trim();
+        const lastName = guestCheckoutForm.elements.lastName.value.trim();
+        const email = guestCheckoutForm.elements.email.value.trim();
+        const phone = guestCheckoutForm.elements.phone.value.trim();
+        const address = guestCheckoutForm.elements.address.value.trim();
+        const city = guestCheckoutForm.elements.city.value.trim();
+        const state = guestCheckoutForm.elements.state.value.trim();
+        const zip = guestCheckoutForm.elements.zip.value.trim();
+        
+        if (!firstName || !lastName || !email || !phone || !address || !city || !state || !zip) {
+          setMessage("Please fill in all required fields.", true);
+          return;
+        }
+        
         try {
           const formData = new FormData(guestCheckoutForm);
           saveGuestCheckoutInfo(formData);
           setMessage("Proceeding to cart...");
-          window.location.href = "cart.html";
+          setTimeout(() => {
+            window.location.href = "cart.html";
+          }, 300);
         } catch (error) {
           console.error("guest checkout click failed", error);
           setMessage("Could not proceed to checkout.", true);
