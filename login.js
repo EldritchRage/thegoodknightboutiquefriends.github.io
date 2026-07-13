@@ -78,19 +78,36 @@ if (!isAuthConfigured()) {
     }
   });
 
-  guestCheckoutForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    setMessage("Processing guest checkout...");
-    try {
-      const formData = new FormData(guestCheckoutForm);
-      saveGuestCheckoutInfo(formData);
-      setMessage("Proceeding to checkout...");
-      setTimeout(() => {
+  // In case the guest form is submitted normally
+  if (guestCheckoutForm) {
+    guestCheckoutForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setMessage("Processing guest checkout...");
+      try {
+        const formData = new FormData(guestCheckoutForm);
+        saveGuestCheckoutInfo(formData);
+        setMessage("Proceeding to cart...");
         window.location.href = "cart.html";
-      }, 500);
-    } catch (error) {
-      console.error("guest checkout failed", error);
-      setMessage("Could not proceed to checkout.", true);
+      } catch (error) {
+        console.error("guest checkout failed", error);
+        setMessage("Could not proceed to checkout.", true);
+      }
+    });
+
+    // Also handle button click (button is type="button" now)
+    const guestContinueBtn = document.getElementById("guest-continue-btn");
+    if (guestContinueBtn) {
+      guestContinueBtn.addEventListener("click", (e) => {
+        try {
+          const formData = new FormData(guestCheckoutForm);
+          saveGuestCheckoutInfo(formData);
+          setMessage("Proceeding to cart...");
+          window.location.href = "cart.html";
+        } catch (error) {
+          console.error("guest checkout click failed", error);
+          setMessage("Could not proceed to checkout.", true);
+        }
+      });
     }
-  });
+  }
 }
