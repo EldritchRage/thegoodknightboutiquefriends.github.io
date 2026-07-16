@@ -1,283 +1,265 @@
-import { db, isFirebaseReady } from "./firebase-client.js";
-import { doc, getDoc, collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-
-// =============================================================================
-// DATA FETCHING
-// =============================================================================
-
-async function loadHomepageConfig() {
-  try {
-    const configRef = doc(db, "homepage", "config");
-    const snap = await getDoc(configRef);
-    return snap.exists() ? snap.data() : null;
-  } catch (error) {
-    console.error("Failed to load homepage config:", error);
-    return null;
-  }
-}
-
-async function loadActivePromotions() {
-  try {
-    const now = new Date();
-    const promoQuery = query(
-      collection(db, "homepage", "config", "promotions"),
-      where("enabled", "==", true),
-      orderBy("displayOrder", "asc")
-    );
-    const snap = await getDocs(promoQuery);
-    
-    return snap.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
-      .filter(promo => {
-        if (promo.startDate) {
-          const start = new Date(promo.startDate);
-          if (now < start) return false;
-        }
-        if (promo.endDate) {
-          const end = new Date(promo.endDate);
-          if (now > end) return false;
-        }
-        return true;
-      });
-  } catch (error) {
-    console.error("Failed to load promotions:", error);
-    return [];
-  }
-}
-
-async function loadFeaturedProducts() {
-  try {
-    // Get featured product references
-    const featuredRef = collection(db, "homepage", "config", "featured_products");
-    const snap = await getDocs(query(featuredRef, orderBy("displayOrder", "asc")));
-    const productIds = snap.docs.map(doc => doc.data().productId);
-    
-    // Fetch actual products from products collection
-    const products = [];
-    for (const productId of productIds) {
-      const productRef = doc(db, "products", productId);
-      const productSnap = await getDoc(productRef);
-      if (productSnap.exists()) {
-        products.push({ id: productId, ...productSnap.data() });
-      }
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.runProgram = exports.run = void 0;
+const tslib_1 = require("tslib");
+const commander_1 = require("commander");
+const path_1 = require("path");
+const colors_1 = tslib_1.__importDefault(require("./colors"));
+const config_1 = require("./config");
+const errors_1 = require("./errors");
+const ipc_1 = require("./ipc");
+const log_1 = require("./log");
+const telemetry_1 = require("./telemetry");
+const cli_1 = require("./util/cli");
+const emoji_1 = require("./util/emoji");
+process.on('unhandledRejection', (error) => {
+    console.error(colors_1.default.failure('[fatal]'), error);
+});
+process.on('message', ipc_1.receive);
+async function run() {
+    try {
+        const config = await (0, config_1.loadConfig)();
+        runProgram(config);
     }
-    return products;
-  } catch (error) {
-    console.error("Failed to load featured products:", error);
-    return [];
-  }
+    catch (e) {
+        process.exitCode = (0, errors_1.isFatal)(e) ? e.exitCode : 1;
+        log_1.logger.error(e.message ? e.message : String(e));
+    }
 }
-
-async function loadCategories() {
-  try {
-    const catQuery = query(
-      collection(db, "homepage", "config", "categories"),
-      where("enabled", "==", true),
-      orderBy("displayOrder", "asc")
-    );
-    const snap = await getDocs(catQuery);
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  } catch (error) {
-    console.error("Failed to load categories:", error);
-    return [];
-  }
+exports.run = run;
+async function getPackageManager(config, packageManager) {
+    if (packageManager === 'cocoapods') {
+        if ((await config.ios.packageManager) === 'bundler') {
+            return 'bundler';
+        }
+        return 'Cocoapods';
+    }
+    return 'SPM';
 }
-
-// =============================================================================
-// HERO SECTION
-// =============================================================================
-
-async function renderHero() {
-  const config = await loadHomepageConfig();
-  const heroImage = document.getElementById("hero-image");
-  const heroHeadline = document.getElementById("hero-headline");
-  const heroSubheading = document.getElementById("hero-subheading");
-  const heroButton = document.getElementById("hero-button");
-
-  if (config?.hero) {
-    const hero = config.hero;
-    if (hero.image) heroImage.src = hero.image;
-    if (hero.headline) heroHeadline.textContent = hero.headline;
-    if (hero.subheading) heroSubheading.textContent = hero.subheading;
-    if (hero.buttonText) heroButton.textContent = hero.buttonText;
-    if (hero.buttonLink) heroButton.href = hero.buttonLink;
-  }
-}
-
-// =============================================================================
-// PROMO SECTION
-// =============================================================================
-
-let currentPromoIndex = 0;
-let promos = [];
-
-async function renderPromos() {
-  promos = await loadActivePromotions();
-  
-  if (promos.length === 0) {
-    document.getElementById("promo-section").classList.add("hidden");
-    return;
-  }
-
-  document.getElementById("promo-section").classList.remove("hidden");
-  renderPromoCarousel();
-  
-  if (promos.length > 1) {
-    startPromoRotation();
-  }
-}
-
-function renderPromoCarousel() {
-  const carousel = document.getElementById("promo-carousel");
-  const indicators = document.getElementById("promo-indicators");
-  
-  carousel.innerHTML = promos.map((promo, idx) => `
-    <div class="promo-item ${idx === currentPromoIndex ? 'active' : ''}" data-index="${idx}">
-      ${promo.image ? `<img src="${promo.image}" alt="${promo.title}" class="promo-image">` : ''}
-      <div class="promo-content">
-        <h3>${promo.title || ''}</h3>
-        <p>${promo.description || ''}</p>
-        ${promo.buttonText ? `<a href="${promo.buttonLink || '#'}" class="button button-promo">${promo.buttonText}</a>` : ''}
-      </div>
-    </div>
-  `).join('');
-
-  indicators.innerHTML = promos.map((_, idx) => `
-    <button class="promo-dot ${idx === currentPromoIndex ? 'active' : ''}" data-index="${idx}" aria-label="Go to promo ${idx + 1}"></button>
-  `).join('');
-
-  indicators.querySelectorAll('.promo-dot').forEach(dot => {
-    dot.addEventListener('click', (e) => {
-      currentPromoIndex = parseInt(e.target.dataset.index);
-      renderPromoCarousel();
-      resetPromoRotation();
+function runProgram(config) {
+    commander_1.program.version(config.cli.package.version);
+    commander_1.program
+        .command('config', { hidden: true })
+        .description(`print evaluated Capacitor config`)
+        .option('--json', 'Print in JSON format')
+        .action((0, cli_1.wrapAction)(async ({ json }) => {
+        const { configCommand } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/config')));
+        await configCommand(config, json);
+    }));
+    commander_1.program
+        .command('create [directory] [name] [id]', { hidden: true })
+        .description('Creates a new Capacitor project')
+        .action((0, cli_1.wrapAction)(async () => {
+        const { createCommand } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/create')));
+        await createCommand();
+    }));
+    commander_1.program
+        .command('init [appName] [appId]')
+        .description(`Initialize Capacitor configuration`)
+        .option('--web-dir <value>', 'Optional: Directory of your projects built web assets')
+        .option('--skip-appid-validation', 'Optional: Skip validating the app ID for iOS and Android compatibility')
+        .action((0, cli_1.wrapAction)((0, telemetry_1.telemetryAction)(config, async (appName, appId, { webDir, skipAppidValidation }) => {
+        const { initCommand } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/init')));
+        await initCommand(config, appName, appId, webDir, skipAppidValidation);
+    })));
+    commander_1.program
+        .command('serve', { hidden: true })
+        .description('Serves a Capacitor Progressive Web App in the browser')
+        .action((0, cli_1.wrapAction)(async () => {
+        const { serveCommand } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/serve')));
+        await serveCommand();
+    }));
+    commander_1.program
+        .command('sync [platform]')
+        .description(`${colors_1.default.input('copy')} + ${colors_1.default.input('update')}`)
+        .option('--deployment', 'Optional: if provided, pod install will use --deployment option')
+        .option('--inline', 'Optional: if true, all source maps will be inlined for easier debugging on mobile devices', false)
+        .action((0, cli_1.wrapAction)((0, telemetry_1.telemetryAction)(config, async (platform, { deployment, inline }) => {
+        const { syncCommand } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/sync')));
+        await syncCommand(config, platform, deployment, inline);
+    })));
+    commander_1.program
+        .command('update [platform]')
+        .description(`updates the native plugins and dependencies based on ${colors_1.default.strong('package.json')}`)
+        .option('--deployment', 'Optional: if provided, pod install will use --deployment option')
+        .action((0, cli_1.wrapAction)((0, telemetry_1.telemetryAction)(config, async (platform, { deployment }) => {
+        const { updateCommand } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/update')));
+        await updateCommand(config, platform, deployment);
+    })));
+    commander_1.program
+        .command('copy [platform]')
+        .description('copies the web app build into the native app')
+        .option('--inline', 'Optional: if true, all source maps will be inlined for easier debugging on mobile devices', false)
+        .action((0, cli_1.wrapAction)((0, telemetry_1.telemetryAction)(config, async (platform, { inline }) => {
+        const { copyCommand } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/copy')));
+        await copyCommand(config, platform, inline);
+    })));
+    commander_1.program
+        .command('build <platform>')
+        .description('builds the release version of the selected platform')
+        .option('--scheme <schemeToBuild>', 'iOS Scheme to build')
+        .option('--flavor <flavorToBuild>', 'Android Flavor to build')
+        .option('--keystorepath <keystorePath>', 'Path to the keystore')
+        .option('--keystorepass <keystorePass>', 'Password to the keystore')
+        .option('--keystorealias <keystoreAlias>', 'Key Alias in the keystore')
+        .option('--configuration <name>', 'Configuration name of the iOS Scheme')
+        .option('--keystorealiaspass <keystoreAliasPass>', 'Password for the Key Alias')
+        .addOption(new commander_1.Option('--androidreleasetype <androidreleasetype>', 'Android release type; APK or AAB').choices([
+        'AAB',
+        'APK',
+    ]))
+        .addOption(new commander_1.Option('--signing-type <signingtype>', 'Program used to sign apps (default: jarsigner)').choices([
+        'apksigner',
+        'jarsigner',
+    ]))
+        .addOption(new commander_1.Option('--xcode-team-id <xcodeTeamID>', 'The Developer team to use for building and exporting the archive'))
+        .addOption(new commander_1.Option('--xcode-export-method <xcodeExportMethod>', 'Describes how xcodebuild should export the archive (default:  app-store-connect)').choices([
+        'app-store-connect',
+        'release-testing',
+        'enterprise',
+        'debugging',
+        'developer-id',
+        'mac-application',
+        'validation',
+    ]))
+        .addOption(new commander_1.Option('--xcode-signing-style <xcodeSigningStyle>', 'The iOS signing style to use when building the app for distribution (default: automatic)').choices(['automatic', 'manual']))
+        .addOption(new commander_1.Option('--xcode-signing-certificate <xcodeSigningCertificate>', 'A certificate name, SHA-1 hash, or automatic selector to use for signing for iOS builds'))
+        .addOption(new commander_1.Option('--xcode-provisioning-profile <xcodeProvisioningProfile>', 'A provisioning profile name or UUID for iOS builds'))
+        .action((0, cli_1.wrapAction)((0, telemetry_1.telemetryAction)(config, async (platform, { scheme, flavor, keystorepath, keystorepass, keystorealias, keystorealiaspass, androidreleasetype, signingType, configuration, xcodeTeamId, xcodeExportMethod, xcodeSigningStyle, xcodeSigningCertificate, xcodeProvisioningProfile, }) => {
+        const { buildCommand } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/build')));
+        await buildCommand(config, platform, {
+            scheme,
+            flavor,
+            keystorepath,
+            keystorepass,
+            keystorealias,
+            keystorealiaspass,
+            androidreleasetype,
+            signingtype: signingType,
+            configuration,
+            xcodeTeamId,
+            xcodeExportMethod,
+            xcodeSigningType: xcodeSigningStyle,
+            xcodeSigningCertificate,
+            xcodeProvisioningProfile,
+        });
+    })));
+    commander_1.program
+        .command(`run [platform]`)
+        .description(`runs ${colors_1.default.input('sync')}, then builds and deploys the native app`)
+        .option('--scheme <schemeName>', 'set the scheme of the iOS project')
+        .option('--flavor <flavorName>', 'set the flavor of the Android project (flavor dimensions not yet supported)')
+        .option('--list', 'list targets, then quit')
+        .addOption(new commander_1.Option('--json').hideHelp())
+        .option('--target <id>', 'use a specific target')
+        .option('--target-name <name>', 'use a specific target by name')
+        .option('--target-name-sdk-version <version>', 'use a specific sdk version when using --target-name, ex: 26.0 (for iOS 26) or 35 (for Android API 35)')
+        .option('--no-sync', `do not run ${colors_1.default.input('sync')}`)
+        .option('--forwardPorts <port:port>', 'Automatically run "adb reverse" for better live-reloading support')
+        .option('-l, --live-reload', 'Set live-reload URL via CLI (uses defaults, overrides server.url config)')
+        .option('--host <host>', 'Configure host for live-reload URL (used with --live-reload)')
+        .option('--port <port>', 'Configure port for live-reload URL (used with --live-reload)')
+        .option('--configuration <name>', 'Configuration name of the iOS Scheme')
+        .option('--https', 'Use https:// instead of http:// for live-reload URL (used with --live-reload)')
+        .action((0, cli_1.wrapAction)((0, telemetry_1.telemetryAction)(config, async (platform, { scheme, flavor, list, json, target, targetName, targetNameSdkVersion, sync, forwardPorts, liveReload, host, port, configuration, https, }) => {
+        const { runCommand } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/run')));
+        await runCommand(config, platform, {
+            scheme,
+            flavor,
+            list,
+            json,
+            target,
+            targetName,
+            targetNameSdkVersion,
+            sync,
+            forwardPorts,
+            liveReload,
+            host,
+            port,
+            configuration,
+            https,
+        });
+    })));
+    commander_1.program
+        .command('open [platform]')
+        .description('opens the native project workspace (Xcode for iOS)')
+        .action((0, cli_1.wrapAction)((0, telemetry_1.telemetryAction)(config, async (platform) => {
+        const { openCommand } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/open')));
+        await openCommand(config, platform);
+    })));
+    commander_1.program
+        .command('add [platform]')
+        .description('add a native platform project')
+        .option('--packagemanager <packageManager>', 'The package manager to use for dependency installs (CocoaPods or SPM)')
+        .action((0, cli_1.wrapAction)((0, telemetry_1.telemetryAction)(config, async (platform, { packagemanager }) => {
+        const { addCommand } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/add')));
+        const configWritable = config;
+        configWritable.ios.packageManager = getPackageManager(config, packagemanager === null || packagemanager === void 0 ? void 0 : packagemanager.toLowerCase());
+        if ((packagemanager === null || packagemanager === void 0 ? void 0 : packagemanager.toLowerCase()) === 'CocoaPods'.toLowerCase()) {
+            configWritable.cli.assets.ios.platformTemplateArchive = 'ios-pods-template.tar.gz';
+            configWritable.cli.assets.ios.platformTemplateArchiveAbs = (0, path_1.resolve)(configWritable.cli.assetsDirAbs, configWritable.cli.assets.ios.platformTemplateArchive);
+        }
+        await addCommand(configWritable, platform);
+    })));
+    commander_1.program
+        .command('ls [platform]')
+        .description('list installed Cordova and Capacitor plugins')
+        .action((0, cli_1.wrapAction)((0, telemetry_1.telemetryAction)(config, async (platform) => {
+        const { listCommand } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/list')));
+        await listCommand(config, platform);
+    })));
+    commander_1.program
+        .command('doctor [platform]')
+        .description('checks the current setup for common errors')
+        .action((0, cli_1.wrapAction)((0, telemetry_1.telemetryAction)(config, async (platform) => {
+        const { doctorCommand } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/doctor')));
+        await doctorCommand(config, platform);
+    })));
+    commander_1.program
+        .command('telemetry [on|off]', { hidden: true })
+        .description('enable or disable telemetry')
+        .action((0, cli_1.wrapAction)(async (onOrOff) => {
+        const { telemetryCommand } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/telemetry')));
+        await telemetryCommand(onOrOff);
+    }));
+    commander_1.program
+        .command('📡', { hidden: true })
+        .description('IPC receiver command')
+        .action(() => {
+        // no-op: IPC messages are received via `process.on('message')`
     });
-  });
+    commander_1.program
+        .command('plugin:generate', { hidden: true })
+        .description('start a new Capacitor plugin')
+        .action((0, cli_1.wrapAction)(async () => {
+        const { newPluginCommand } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/new-plugin')));
+        await newPluginCommand();
+    }));
+    commander_1.program
+        .command('migrate')
+        .option('--noprompt', 'do not prompt for confirmation')
+        .option('--packagemanager <packageManager>', 'The package manager to use for dependency installs (npm, pnpm, yarn)')
+        .description('Migrate your current Capacitor app to the latest major version of Capacitor.')
+        .action((0, cli_1.wrapAction)(async ({ noprompt, packagemanager }) => {
+        const { migrateCommand } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/migrate')));
+        await migrateCommand(config, noprompt, packagemanager);
+    }));
+    commander_1.program
+        .command('spm-migration-assistant')
+        .description('Remove Cocoapods from project and switch to Swift Package Manager')
+        .action((0, cli_1.wrapAction)(async () => {
+        const { migrateToSPM } = await Promise.resolve().then(() => tslib_1.__importStar(require('./tasks/migrate-spm')));
+        await migrateToSPM(config);
+    }));
+    commander_1.program.arguments('[command]').action((0, cli_1.wrapAction)(async (cmd) => {
+        if (typeof cmd === 'undefined') {
+            log_1.output.write(`\n  ${(0, emoji_1.emoji)('⚡️', '--')}  ${colors_1.default.strong('Capacitor - Cross-Platform apps with JavaScript and the Web')}  ${(0, emoji_1.emoji)('⚡️', '--')}\n\n`);
+            commander_1.program.outputHelp();
+        }
+        else {
+            (0, errors_1.fatal)(`Unknown command: ${colors_1.default.input(cmd)}`);
+        }
+    }));
+    commander_1.program.parse(process.argv);
 }
-
-function startPromoRotation() {
-  setInterval(() => {
-    currentPromoIndex = (currentPromoIndex + 1) % promos.length;
-    renderPromoCarousel();
-  }, 5000);
-}
-
-function resetPromoRotation() {
-  // Clear existing interval if needed - for simplicity, just update on click
-  currentPromoIndex = currentPromoIndex;
-}
-
-// =============================================================================
-// FEATURED PRODUCTS CAROUSEL
-// =============================================================================
-
-let scrollPosition = 0;
-
-async function renderFeaturedProducts() {
-  const products = await loadFeaturedProducts();
-  const carousel = document.getElementById("featured-carousel");
-
-  if (products.length === 0) {
-    carousel.innerHTML = '<p class="muted">No featured products yet.</p>';
-    return;
-  }
-
-  carousel.innerHTML = products.map(product => `
-    <article class="featured-product-card">
-      <div class="featured-product-image">
-        <img src="${product.imageUrl || 'https://via.placeholder.com/300x300?text=No+Image'}" 
-             alt="${product.name}" loading="lazy">
-      </div>
-      <h4>${product.name}</h4>
-      <p class="price">${formatPrice(product.price)}</p>
-      <a href="shop.html" class="button button-small">View</a>
-    </article>
-  `).join('');
-
-  // Carousel navigation
-  document.getElementById("carousel-prev").addEventListener("click", () => {
-    carousel.scrollBy({ left: -320, behavior: "smooth" });
-  });
-
-  document.getElementById("carousel-next").addEventListener("click", () => {
-    carousel.scrollBy({ left: 320, behavior: "smooth" });
-  });
-}
-
-// =============================================================================
-// CATEGORIES SECTION
-// =============================================================================
-
-async function renderCategories() {
-  const categories = await loadCategories();
-  const grid = document.getElementById("categories-grid");
-
-  if (categories.length === 0) {
-    grid.innerHTML = '<p class="muted">No categories available.</p>';
-    return;
-  }
-
-  grid.innerHTML = categories.map(cat => `
-    <a href="shop.html?category=${encodeURIComponent(cat.id)}" class="category-card">
-      ${cat.image ? `<img src="${cat.image}" alt="${cat.name}" class="category-image">` : ''}
-      <h3>${cat.name}</h3>
-    </a>
-  `).join('');
-}
-
-// =============================================================================
-// ABOUT SECTION
-// =============================================================================
-
-async function renderAbout() {
-  const config = await loadHomepageConfig();
-  
-  if (config?.about) {
-    const about = config.about;
-    const textEl = document.getElementById("about-text");
-    const imageWrap = document.getElementById("about-image-wrap");
-    const imageEl = document.getElementById("about-image");
-
-    if (about.text) textEl.textContent = about.text;
-    
-    if (about.image) {
-      imageEl.src = about.image;
-      imageWrap.classList.remove("hidden");
-    } else {
-      imageWrap.classList.add("hidden");
-    }
-  }
-}
-
-// =============================================================================
-// UTILITIES
-// =============================================================================
-
-function formatPrice(amount) {
-  return `$${Number(amount || 0).toFixed(2)}`;
-}
-
-// =============================================================================
-// INITIALIZATION
-// =============================================================================
-
-async function initializeHomepage() {
-  if (!isFirebaseReady) {
-    console.warn("Firebase not configured. Using fallback content.");
-    return;
-  }
-
-  try {
-    await Promise.all([
-      renderHero(),
-      renderPromos(),
-      renderFeaturedProducts(),
-      renderCategories(),
-      renderAbout()
-    ]);
-  } catch (error) {
-    console.error("Error initializing homepage:", error);
-  }
-}
-
-document.addEventListener("DOMContentLoaded", initializeHomepage);
+exports.runProgram = runProgram;
