@@ -5,6 +5,7 @@ import { categoryLabels, defaultCategory } from "./categories.js";
 import { normalizeProductForRead } from "./product-contract.js";
 import { getProductReadMode, productVisibleInMode } from "./contract-flags.js";
 import { recordContractEvent } from "./contract-telemetry.js";
+import { filterStripeAvailableProducts } from "./stripe-availability.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const fallbackCatalog = {};
@@ -150,6 +151,7 @@ async function loadProducts() {
 
   try {
     const snap = await getDocs(collection(db, "products"));
+    const visibleProducts = [];
     snap.forEach((docSnap) => {
       const product = normalizeProductForRead({ id: docSnap.id, ...docSnap.data() });
       const mode = getProductReadMode();
@@ -160,6 +162,11 @@ async function loadProducts() {
       if (!productVisibleInMode(product)) {
         return;
       }
+      visibleProducts.push(product);
+    });
+
+    const availableProducts = await filterStripeAvailableProducts(visibleProducts);
+    availableProducts.forEach((product) => {
       const category = normalizeCategory(product.category);
       if (!category) {
         return;

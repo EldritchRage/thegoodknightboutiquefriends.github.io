@@ -3,6 +3,7 @@ import { doc, getDoc, collection, getDocs, query, where, orderBy } from "https:/
 import { normalizeHomepageForRead } from "./homepage-contract.js";
 import { normalizeProductForRead } from "./product-contract.js";
 import { recordContractEvent } from "./contract-telemetry.js";
+import { filterStripeAvailableProducts } from "./stripe-availability.js";
 
 // =============================================================================
 // DATA FETCHING
@@ -69,7 +70,7 @@ async function loadFeaturedProducts() {
         products.push(normalizeProductForRead({ id: productId, ...productSnap.data() }));
       }
     }
-    return products;
+    return filterStripeAvailableProducts(products);
   } catch (error) {
     console.error("Failed to load featured products:", error);
     return [];
