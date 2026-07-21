@@ -1,5 +1,8 @@
 import { db, isFirebaseReady } from "./firebase-client.js";
 import { doc, getDoc, collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { normalizeHomepageForRead } from "./homepage-contract.js";
+import { normalizeProductForRead } from "./product-contract.js";
+import { recordContractEvent } from "./contract-telemetry.js";
 
 // =============================================================================
 // DATA FETCHING
@@ -9,7 +12,12 @@ async function loadHomepageConfig() {
   try {
     const configRef = doc(db, "homepage", "config");
     const snap = await getDoc(configRef);
-    return snap.exists() ? snap.data() : null;
+    if (!snap.exists()) return null;
+    const config = normalizeHomepageForRead(snap.data());
+    if (config.contractIssues.length) {
+      recordContractEvent("homepage_contract_issue", { schemaVersion: config.schemaVersion, reason: config.contractIssues[0] });
+    }
+    return config;
   } catch (error) {
     console.error("Failed to load homepage config:", error);
     return null;
@@ -58,7 +66,7 @@ async function loadFeaturedProducts() {
       const productRef = doc(db, "products", productId);
       const productSnap = await getDoc(productRef);
       if (productSnap.exists()) {
-        products.push({ id: productId, ...productSnap.data() });
+        products.push(normalizeProductForRead({ id: productId, ...productSnap.data() }));
       }
     }
     return products;

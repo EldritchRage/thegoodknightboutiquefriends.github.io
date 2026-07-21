@@ -1,21 +1,15 @@
 import { CHECKOUT_API_URL } from "./checkout-config.js";
+import { buildCheckoutRequest } from "./stripe-contract.js";
 
 export async function createCheckoutSession(cartItems) {
-  const lineItems = cartItems.map((item) => ({
-    price_id: item.priceId,
-    quantity: item.quantity
-  }));
+  const payload = buildCheckoutRequest(cartItems, window.location.origin);
 
   const response = await fetch(CHECKOUT_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({
-      line_items: lineItems,
-      success_url: `${window.location.origin}/checkout-success.html`,
-      cancel_url: `${window.location.origin}/checkout-cancel.html`
-    })
+    body: JSON.stringify(payload)
   });
 
   if (!response.ok) {

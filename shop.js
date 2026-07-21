@@ -2,6 +2,9 @@ import { db, isFirebaseReady } from "./firebase-client.js";
 import { addToCart, getCartCount, onCartUpdated } from "./cart.js";
 import { resolveStripePriceId } from "./sampleProducts.js";
 import { categoryLabels, defaultCategory } from "./categories.js";
+import { normalizeProductForRead } from "./product-contract.js";
+import { getProductReadMode, productVisibleInMode } from "./contract-flags.js";
+import { recordContractEvent } from "./contract-telemetry.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const fallbackCatalog = {};
@@ -148,7 +151,15 @@ async function loadProducts() {
   try {
     const snap = await getDocs(collection(db, "products"));
     snap.forEach((docSnap) => {
-      const product = { id: docSnap.id, ...docSnap.data() };
+      const product = normalizeProductForRead({ id: docSnap.id, ...docSnap.data() });
+      const mode = getProductReadMode();
+      recordContractEvent("product_normalized", { schemaVersion: product.schemaVersion, mode });
+      if (!product.isPublicEligible) {
+        recordContractEvent("product_ineligible", { schemaVersion: product.schemaVersion, mode, reason: product.contractIssues[0] || "eligibility" });
+      }
+      if (!productVisibleInMode(product)) {
+        return;
+      }
       const category = normalizeCategory(product.category);
       if (!category) {
         return;
