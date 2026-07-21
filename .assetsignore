@@ -1,0 +1,16 @@
+.git
+.git/**
+.gitignore
+.wrangler
+.wrangler/**
+.assetsignore
+wrangler.jsonc
+*.md
+functions/**
+firebase.json
+firestore.rules
+storage.rules
+cloudflare-worker.js
+homepage-init.js
+firebase-config.example.js
+paypal-config.example.js
