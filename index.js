@@ -77,21 +77,6 @@ async function loadFeaturedProducts() {
   }
 }
 
-async function loadCategories() {
-  try {
-    const catQuery = query(
-      collection(db, "homepage", "config", "categories"),
-      where("enabled", "==", true),
-      orderBy("displayOrder", "asc")
-    );
-    const snap = await getDocs(catQuery);
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  } catch (error) {
-    console.error("Failed to load categories:", error);
-    return [];
-  }
-}
-
 // =============================================================================
 // HERO SECTION
 // =============================================================================
@@ -214,27 +199,6 @@ async function renderFeaturedProducts() {
 }
 
 // =============================================================================
-// CATEGORIES SECTION
-// =============================================================================
-
-async function renderCategories() {
-  const categories = await loadCategories();
-  const grid = document.getElementById("categories-grid");
-
-  if (categories.length === 0) {
-    grid.innerHTML = '<p class="muted">No categories available.</p>';
-    return;
-  }
-
-  grid.innerHTML = categories.map(cat => `
-    <a href="shop.html?category=${encodeURIComponent(cat.id)}" class="category-card">
-      ${cat.image ? `<img src="${cat.image}" alt="${cat.name}" class="category-image">` : ''}
-      <h3>${cat.name}</h3>
-    </a>
-  `).join('');
-}
-
-// =============================================================================
 // ABOUT SECTION
 // =============================================================================
 
@@ -281,7 +245,6 @@ async function initializeHomepage() {
       renderHero(),
       renderPromos(),
       renderFeaturedProducts(),
-      renderCategories(),
       renderAbout()
     ]);
   } catch (error) {
